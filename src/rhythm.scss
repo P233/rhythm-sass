@@ -99,22 +99,26 @@ $__config: (
     $_function-args: lib.rest($_value);
 
     @if $_property == "margin-top" or $_property == "padding-top" {
-      @if $_function-name == "rhythm" or $_function-name == "baseline-top" {
+      @if $_function-name == "baseline-top" {
         $_result: meta.call(meta.get-function($_function-name), $_font-map, $_function-args...);
+      } @else if $_function-name == "rhythm" {
+        $_result: meta.call(meta.get-function($_function-name), $_function-args...);
       } @else if $_function-name == "baseline-between" {
         $_font-map-above: lib.first($_function-args);
         $_rest-args: lib.rest($_function-args);
         $_result: meta.call(meta.get-function($_function-name), $_font-map-above, $_font-map, $_rest-args...);
       } @else {
-        @error "Unsupported function #{meta.inspect($_function-name)} in #{meta.inspect($_property)}.";
+        @error "Unsupported function #{meta.inspect($_function-name)} in #{meta.inspect($_property)}. Supported functions: rhythm, baseline-top, baseline-between.";
       }
     } @else if $_property == "margin-bottom" or $_property == "padding-bottom" {
-      @if $_function-name == "rhythm" or $_function-name == "baseline-bottom" {
+      @if $_function-name == "baseline-bottom" {
         $_result: meta.call(meta.get-function($_function-name), $_font-map, $_function-args...);
+      } @else if $_function-name == "rhythm" {
+        $_result: meta.call(meta.get-function($_function-name), $_function-args...);
       } @else if $_function-name == "baseline-between" {
         $_result: meta.call(meta.get-function($_function-name), $_font-map, $_function-args...);
       } @else {
-        @error "Unsupported function #{meta.inspect($_function-name)} in #{meta.inspect($_property)}.";
+        @error "Unsupported function #{meta.inspect($_function-name)} in #{meta.inspect($_property)}. Supported functions: rhythm, baseline-bottom, baseline-between.";
       }
     } @else {
       @error "Unsupported property #{meta.inspect($_property)} in #{meta.inspect($spacing-map)}.";

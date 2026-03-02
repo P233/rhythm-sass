@@ -1,5 +1,8 @@
 # rhythm-sass
 
+[![npm version](https://img.shields.io/npm/v/rhythm-sass)](https://www.npmjs.com/package/rhythm-sass)
+[![CI](https://github.com/p233/rhythm-sass/actions/workflows/test.yml/badge.svg)](https://github.com/p233/rhythm-sass/actions/workflows/test.yml)
+
 ![rhythm-sass](./docs/logo.png)
 
 rhythm-sass is a Sass library for implementing vertical rhythm in web typography, inspired by and building upon concepts introduced by [Plumber](https://jamonserrano.github.io/plumber-sass/). It calculates precise font offsets to align text with vertical rhythm grids, enabling front-end developers to achieve pixel-perfect control over typographic elements.
@@ -18,14 +21,14 @@ npm install --save-dev rhythm-sass
 
 ```scss
 // Option 1: Use directly in your stylesheet
-@use "rhythm-sass" as * with (
+@use "pkg:rhythm-sass" as * with (
   $baseline-ratio: 0.112061,   // required
   $rhythm-size: 8px,           // optional
   $rem-size: 16px              // optional
 );
 
 // Option 2: Forward with custom settings to be used in other files
-@forward "rhythm-sass" with (
+@forward "pkg:rhythm-sass" with (
   $baseline-ratio: 0.112061,   // required
   $rhythm-size: 8px,           // optional
   $rem-size: 16px              // optional
@@ -36,6 +39,8 @@ npm install --save-dev rhythm-sass
   font: 16px/1 "Noto Serif", serif;
 }
 ```
+
+> **Note:** The `pkg:` URL syntax requires Sass 1.71+ and a bundler that supports it (Vite, webpack 5, etc.). If your toolchain does not support `pkg:` URLs yet, use `"rhythm-sass"` directly.
 
 This library exposes three global variables:
 
@@ -140,12 +145,12 @@ The `$spacing-map` accepts four keys, each corresponding to a CSS property:
 These keys use a special syntax to call rhythm functions. Here's how it works:
 
 1. The value for each key is a Sass list.
-2. The first item in the list is the function name.
+2. The first item in the list is the function name. Supported function names are: `rhythm`, `baseline-top`, `baseline-bottom`, and `baseline-between`.
 3. The remaining items are the function arguments.
-4. The current `$font-map` is automatically used and should be omitted from the arguments.
+4. For `baseline-top`, `baseline-bottom`, and `baseline-between`, the current `$font-map` is automatically injected and should be omitted from the arguments. For `rhythm`, no font-map is needed and the arguments are passed directly.
 5. When calling the `baseline-between` function:
    - For `padding-top` and `margin-top`, the current `$font-map` is treated as `$font-map-below`.
-   - For `padding-bottom` and `margin-bottom`, the current `$font-map` is treated as `$font-map-above` .
+   - For `padding-bottom` and `margin-bottom`, the current `$font-map` is treated as `$font-map-above`.
 
 Example usage:
 
@@ -164,6 +169,7 @@ $quote-font-map: (
 .quote {
   @include font($quote-font-map, (
     margin-top: baseline-between $paragraph-font-map 3,
+    padding-top: rhythm 1,
     padding-bottom: baseline-bottom 3
   ));
 }
@@ -172,6 +178,7 @@ $quote-font-map: (
 In this example:
 
 - `margin-top` value is translated to `baseline-between($paragraph-font-map, $quote-font-map, 3)`.
+- `padding-top` value is translated to `rhythm(1)`.
 - `padding-bottom` value is translated to `baseline-bottom($quote-font-map, 3)`.
 
 For more examples, please refer to the [examples](./examples) folder in the project root.
@@ -195,6 +202,10 @@ Note: Enabling this mixin will set the `position` property of your `:root` eleme
 ## Pro Tip
 
 For complex layouts, it's recommended to ensure that all text elements, such as headings, paragraphs, and lists, occupy a whole number of rhythm grids. This means aligning the top and bottom of each element precisely with the vertical rhythm grid lines. By doing this, each text element will neatly fit into the overall rhythm of the layout, making it much easier to combine and arrange elements harmoniously.
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for version history.
 
 ## Credits
 
