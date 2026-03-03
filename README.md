@@ -2,6 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/rhythm-sass)](https://www.npmjs.com/package/rhythm-sass)
 [![CI](https://github.com/p233/rhythm-sass/actions/workflows/test.yml/badge.svg)](https://github.com/p233/rhythm-sass/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ![rhythm-sass](./docs/logo.png)
 
@@ -52,7 +53,7 @@ This library exposes three global variables:
 
 ## The font-map
 
-This library requires you to define your typography settings in Sass maps, referred to **font-maps**. Here's an example of a font-map definition:
+This library requires you to define your typography settings in Sass maps, referred to as **font-maps**. Here's an example of a font-map definition:
 
 ```scss
 $heading-font: (
@@ -83,12 +84,12 @@ Functions use the `font-size`, `line-height`, and (if present) `baseline-ratio` 
 
 The `rhythm()` function calculates the total height of a specified number of rhythm grids. It accepts two arguments:
  
- - `$rhythms`: The number of rhythm grids
- - `$offset` (optional): Adjusts the calculated result for additional sizing factors, such as border width.
+- `$rhythms`: The number of rhythm grids
+- `$offset` (optional): Adjusts the calculated result for additional sizing factors, such as border width.
 
 For example, if you want to add a top padding of `5` rhythm grids to an element with a `1px` top border, the actual `padding-top` should be `39px` instead of `40px` (assuming an 8px rhythm). You can calculate the correct padding using a `-1px` offset parameter:
 
-``` scss
+```scss
 padding-top: rhythm(5, -1px);
 ```
 
@@ -210,3 +211,7 @@ See [CHANGELOG.md](./CHANGELOG.md) for version history.
 ## Credits
 
 This project is inspired by [Plumber](https://jamonserrano.github.io/plumber-sass/).
+
+## License
+
+[MIT](./LICENSE)
