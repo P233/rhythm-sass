@@ -1,3 +1,5 @@
+@use "sass:math";
+
 $font-map-1: (
   font-size: 24px,
   line-height: 5
@@ -22,4 +24,59 @@ $font-map-4: (
 $font-map-5: (
   font-size: 12px,
   line-height: 2
+);
+
+// Noto Serif hhea metrics; derived ratio is 0.112 (Plumber measured 0.112061).
+$font-map-6: (
+  font-size: 17px,
+  line-height: 3,
+  ascent: 1069,
+  descent: -293,
+  units-per-em: 1000
+);
+
+// Georgia on macOS: upem 2048, hhea 1878/-449, cap 1419. Shared test vectors
+// with rhythm-gpui (src/math.rs).
+$georgia-body: (
+  font-size: 16px,
+  line-height: 3,
+  ascent: 1878,
+  descent: -449,
+  units-per-em: 2048,
+  cap-height-ratio: math.div(1419, 2048)
+);
+$georgia-heading: (
+  font-size: 28px,
+  line-height: 5,
+  ascent: 1878,
+  descent: -449,
+  units-per-em: 2048,
+  cap-height-ratio: math.div(1419, 2048)
+);
+
+// Synthetic faces with dyadic ratios so drop-cap expectations are exact.
+$clean-body: (
+  font-size: 16px,
+  line-height: 3,
+  baseline-ratio: 0.25,
+  cap-height-ratio: 0.5
+);
+$clean-cap-face: (
+  baseline-ratio: 0.5,
+  cap-height-ratio: 0.8,
+  font-family: (
+    "Display Face",
+    serif
+  )
+);
+
+// A valid script font whose vertical metrics extend beyond the em box, making
+// the derived baseline ratio negative: (1000 + 596 - 1904) / 2000 = -0.154.
+$noto-nastaliq: (
+  font-size: 16px,
+  line-height: 3,
+  ascent: 1904,
+  descent: -596,
+  units-per-em: 1000,
+  cap-height-ratio: 0.714
 );

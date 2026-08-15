@@ -16,6 +16,18 @@
   @return meta.type-of($value) == "number" and math.is-unitless($value) and $value % 1 == 0;
 }
 
+@function is-valid-font-units($value) {
+  @return meta.type-of($value) == "number" and math.is-unitless($value);
+}
+
+@function is-present($value) {
+  @return meta.type-of($value) != "null";
+}
+
+@function is-valid-positive-ratio($value) {
+  @return is-valid-font-units($value) and $value > 0;
+}
+
 @function has-valid-unit($value) {
   @return list.index(("cm" "mm" "q" "in" "pc" "pt" "px" "rem"), string.to-lower-case(math.unit($value))) != null;
 }
@@ -23,6 +35,51 @@
 // ------------------ //
 //  Ensure Functions  //
 // ------------------ //
+
+// Shared by font-maps and cap-face maps: validates the ratio-bearing keys
+// baseline-ratio, ascent/descent/units-per-em, and cap-height-ratio.
+@function ensure-valid-ratio-keys($value) {
+  $_baseline-ratio: map.get($value, baseline-ratio);
+
+  @if is-present($_baseline-ratio) and not is-valid-baseline-ratio($_baseline-ratio) {
+    @error "Invalid baseline-ratio value in #{meta.inspect($value)}. The value must be a decimal between 0 and 1 (exclusive).";
+  }
+
+  $_ascent: map.get($value, ascent);
+  $_descent: map.get($value, descent);
+  $_units-per-em: map.get($value, units-per-em);
+  $_has-metrics: is-present($_ascent) or is-present($_descent) or is-present($_units-per-em);
+
+  @if $_has-metrics {
+    @if is-present($_baseline-ratio) {
+      @error "Ambiguous map #{meta.inspect($value)}: baseline-ratio and font metrics (ascent/descent) are mutually exclusive. Keep one of them.";
+    }
+
+    @if not is-present($_ascent) or not is-present($_descent) {
+      @error "Incomplete font metrics in #{meta.inspect($value)}: ascent and descent are both required. units-per-em is optional and defaults to 1000.";
+    }
+
+    @if not is-valid-font-units($_ascent) or $_ascent <= 0 {
+      @error "Invalid ascent value in #{meta.inspect($value)}. The value must be a unitless number greater than 0, in font units.";
+    }
+
+    @if not is-valid-font-units($_descent) {
+      @error "Invalid descent value in #{meta.inspect($value)}. The value must be a unitless number in font units; both sign conventions are accepted.";
+    }
+
+    @if is-present($_units-per-em) and (not is-valid-font-units($_units-per-em) or $_units-per-em <= 0) {
+      @error "Invalid units-per-em value in #{meta.inspect($value)}. The value must be a unitless number greater than 0.";
+    }
+  }
+
+  $_cap-height-ratio: map.get($value, cap-height-ratio);
+
+  @if is-present($_cap-height-ratio) and not is-valid-positive-ratio($_cap-height-ratio) {
+    @error "Invalid cap-height-ratio value in #{meta.inspect($value)}. The value must be a unitless number greater than 0.";
+  }
+
+  @return $value;
+}
 
 @function ensure-valid-font-map($value) {
   @if meta.type-of($value) != "map" {
@@ -45,13 +102,17 @@
     @error "Invalid line-height value in $font-map: #{meta.inspect($value)}. The line-height key represents the number of rhythms and must be a unitless integer.";
   }
 
-  $_baseline-ratio: map.get($value, baseline-ratio);
+  @return ensure-valid-ratio-keys($value);
+}
 
-  @if $_baseline-ratio and not is-valid-baseline-ratio($_baseline-ratio) {
-    @error "Invalid baseline-ratio value in $font-map: #{meta.inspect($value)}. The value must be a decimal between 0 and 1 (exclusive).";
+// A cap face carries only ratio-bearing keys (plus optional CSS properties);
+// font-size and line-height are solved by drop-cap, so they are not required.
+@function ensure-valid-cap-face-map($value) {
+  @if meta.type-of($value) != "map" {
+    @error "Invalid $cap-font-map: #{meta.inspect($value)}. The value must be a map with optional baseline-ratio (or ascent/descent) and cap-height-ratio keys.";
   }
 
-  @return $value;
+  @return ensure-valid-ratio-keys($value);
 }
 
 @function ensure-valid-rhythms($value) {
@@ -67,7 +128,11 @@
     @error "Invalid $offset: #{meta.inspect($value)}. The value must be a number.";
   }
 
-  @if not math.is-unitless($value) and not has-valid-unit($value) {
+  @if math.is-unitless($value) {
+    @if $value != 0 {
+      @error "Invalid $offset: #{meta.inspect($value)}. A unitless offset other than 0 would produce invalid CSS; append a length unit.";
+    }
+  } @else if not has-valid-unit($value) {
     @error "Invalid $offset unit: #{meta.inspect($value)}. The unit must be an absolute length unit or rem.";
   }
 
@@ -78,35 +143,68 @@
 //  Calculation Functions  //
 // ----------------------- //
 
-@function convert-font-size-to-rhythm-unit($value, $config) {
-  $_font-size-unit: math.unit($value);
-  $_rem-size: map.get($config, rem-size);
+@function convert-to-rhythm-unit($value, $config) {
   $_rhythm-size: map.get($config, rhythm-size);
-  $_rhythm-unit: math.unit($_rhythm-size);
 
-  @if $_font-size-unit == $_rhythm-unit {
+  @if math.unit($value) == math.unit($_rhythm-size) {
     @return $value;
-  } @else if $_font-size-unit == "rem" and $_rhythm-unit == "px" {
-    @return math.div($value, 1rem) * $_rem-size;
-  } @else if $_font-size-unit == "px" and $_rhythm-unit == "rem" {
-    @return math.div($value, $_rem-size) * 1rem;
-  } @else {
-    @error "For best results, both font-size and $rhythm-size should use the same unit, either an absolute length unit or the rem unit. However, if different units are used, rhythm-scss can only convert the font-size unit between px and rem.";
   }
+
+  @if math.compatible($value, $_rhythm-size) {
+    // Adding a zero in the target unit converts between absolute length units.
+    @return $_rhythm-size * 0 + $value;
+  }
+
+  $_rem-size: map.get($config, rem-size);
+
+  @if math.unit($value) == "rem" {
+    @return convert-to-rhythm-unit(math.div($value, 1rem) * $_rem-size, $config);
+  }
+
+  // The rhythm unit is rem and $value is absolute.
+  @return math.div($_rem-size * 0 + $value, $_rem-size) * 1rem;
+}
+
+// The baseline ratio is a closed-form function of the font's vertical metrics.
+// Unlike a hand-measured ratio, the derived value may fall outside 0..1 when a
+// font's vertical metrics extend beyond its em box. Descent is normalized by
+// magnitude because metrics tables commonly report it as a negative value.
+@function baseline-ratio-from-metrics($ascent, $descent, $units-per-em: 1000) {
+  @return math.div($units-per-em + math.abs($descent) - $ascent, 2 * $units-per-em);
 }
 
 @function get-baseline-ratio($font-map, $config) {
+  $_ascent: map.get($font-map, ascent);
+
+  @if is-present($_ascent) {
+    $_units-per-em: map.get($font-map, units-per-em);
+
+    @if not is-present($_units-per-em) {
+      $_units-per-em: 1000;
+    }
+
+    @return baseline-ratio-from-metrics($_ascent, map.get($font-map, descent), $_units-per-em);
+  }
+
   $_font-baseline-ratio: map.get($font-map, baseline-ratio);
 
-  @if map.has-key($font-map, baseline-ratio) {
+  @if is-present($_font-baseline-ratio) {
     @return $_font-baseline-ratio;
   }
 
-  @return map.get($config, baseline-ratio);
+  $_baseline-ratio: map.get($config, baseline-ratio);
+
+  @if not is-present($_baseline-ratio) {
+    @error "No baseline ratio available for #{meta.inspect($font-map)}. Add ascent/descent (or baseline-ratio) to the font-map, or configure the global $baseline-ratio or $ascent/$descent.";
+  }
+
+  @return $_baseline-ratio;
 }
 
+// Offsets stay exact: rounding above/below independently would break the
+// above + below == line-height identity that keeps blocks on whole rows.
 @function calc-baseline-offset($font-map, $config, $direction) {
-  $_font-size: convert-font-size-to-rhythm-unit(map.get($font-map, font-size), $config);
+  $_font-size: convert-to-rhythm-unit(map.get($font-map, font-size), $config);
   $_rhythms: map.get($font-map, line-height);
   $_rhythm-size: map.get($config, rhythm-size);
   $_half-leading: math.div($_rhythm-size * $_rhythms - $_font-size, 2);
@@ -117,13 +215,7 @@
     $_ratio-multiplier: 1 - $_baseline-ratio;
   }
 
-  $_height: $_half-leading + $_font-size * $_ratio-multiplier;
-
-  @if math.unit($_rhythm-size) == "rem" {
-    @return $_height;
-  }
-
-  @return math.round($_height);
+  @return $_half-leading + $_font-size * $_ratio-multiplier;
 }
 
 @function calc-baseline-above-height($font-map, $config) {
@@ -132,6 +224,20 @@
 
 @function calc-baseline-below-depth($font-map, $config) {
   @return calc-baseline-offset($font-map, $config, "below");
+}
+
+// Invisible space between the top of the line box and the cap ink top; the
+// grid-woven analog of CSS text-box-trim with text-box-edge: cap.
+@function calc-cap-trim-top($font-map, $config) {
+  $_cap-height-ratio: map.get($font-map, cap-height-ratio);
+
+  @if not is-present($_cap-height-ratio) {
+    @error "cap-top() and cap-bottom() require a cap-height-ratio key in $font-map: #{meta.inspect($font-map)}.";
+  }
+
+  $_font-size: convert-to-rhythm-unit(map.get($font-map, font-size), $config);
+
+  @return calc-baseline-above-height($font-map, $config) - $_font-size * $_cap-height-ratio;
 }
 
 @function calc-height-with-offset($height, $offset) {

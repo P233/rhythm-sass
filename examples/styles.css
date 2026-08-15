@@ -17,10 +17,7 @@ p {
 
 .container {
   max-width: 640px;
-  padding-top: 2.578644875rem;
-  padding-right: 1rem;
-  padding-bottom: 3.137939rem;
-  padding-left: 1rem;
+  padding: 2.5785rem 1rem 3.138rem;
   margin-right: auto;
   margin-left: auto;
 }
@@ -29,15 +26,15 @@ p {
   font-size: 2.375rem;
   line-height: 3rem;
   font-weight: 700;
-  margin-bottom: 0.887939rem;
+  margin-bottom: 0.888rem;
 }
 
 .heading-h2 {
   font-size: 1.5rem;
   line-height: 2rem;
   font-weight: 700;
-  margin-top: 1.0560305rem;
-  margin-bottom: calc(0.9439695rem - 1px);
+  margin-top: 1.056rem;
+  margin-bottom: calc(0.944rem - 1px);
   display: table;
   border-bottom: 1px solid;
 }
@@ -46,7 +43,7 @@ p {
   font-size: 1.375rem;
   line-height: 2rem;
   font-weight: 400;
-  margin-bottom: 1.395477125rem;
+  margin-bottom: 1.3955rem;
 }
 
 .paragraph {
@@ -57,20 +54,27 @@ p {
   margin-top: 1rem;
 }
 
+.paragraph-drop-cap {
+  float: left;
+  position: relative;
+  top: -0.1302521008rem;
+  font-size: 5.2016806723rem;
+  line-height: 4.5rem;
+  margin-bottom: 1.5rem;
+  margin-right: 0.5rem;
+}
+
 .fake-image {
   height: 20rem;
-  margin-top: 1.137939rem;
-  margin-bottom: 1.362061rem;
+  margin-top: 1.138rem;
+  margin-bottom: 1.362rem;
   background: rgba(128, 128, 128, 0.5);
 }
 
 .row {
   display: flex;
   flex-wrap: wrap;
-  margin-top: 1.137939rem;
-  margin-right: -5rem;
-  margin-bottom: -0.137939rem;
-  margin-left: -5rem;
+  margin: 1.138rem -5rem -0.138rem;
 }
 
 .grid {
@@ -90,16 +94,16 @@ p {
   font-size: 1.28125rem;
   line-height: 1.5rem;
   font-weight: 700;
-  margin-bottom: 0.6091078437rem;
+  margin-bottom: 0.609125rem;
 }
 .card__content {
   font-size: 1rem;
   line-height: 1.5rem;
-  margin-bottom: 0.637939rem;
+  margin-bottom: 0.638rem;
 }
 .card__fake-image {
   height: 6rem;
-  margin-bottom: 0.7529531563rem;
+  margin-bottom: 0.752875rem;
   background: rgba(128, 128, 128, 0.5);
 }
 .card__button {
@@ -115,9 +119,9 @@ p {
   background: rgba(128, 128, 128, 0.5);
   border: none;
   border-radius: 2px;
-  font-size: 0.9375rem;
+  font-size: 15px;
   line-height: 1rem;
-  padding-top: 0.6363071875rem;
+  padding-top: 0.63625rem;
 }
 
 .list {

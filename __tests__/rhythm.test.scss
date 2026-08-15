@@ -1,3 +1,4 @@
+@use "sass:math";
 @use "sass:meta";
 @use "true" as *;
 @use "font-maps" as *;
@@ -23,23 +24,25 @@
   }
 
   @include test("rhythm-top") {
-    @include assert-equal(rhythm-top($font-map-3, 3), 19px);
-    @include assert-equal(rhythm-top($font-map-4, 3), 19px);
-    @include assert-equal(rhythm-top($font-map-4, 3, -1px), 18px);
-    @include assert-equal(rhythm-top($font-map-4, 3, 1px), 20px);
+    @include assert-equal(rhythm-top($font-map-3, 3), 18.594963px);
+    @include assert-equal(rhythm-top($font-map-4, 3), 18.594963px);
+    @include assert-equal(rhythm-top($font-map-4, 3, -1px), 17.594963px);
+    @include assert-equal(rhythm-top($font-map-4, 3, 1px), 19.594963px);
     @include assert-equal(rhythm-top($font-map-2, 3, 1px), rhythm-top($font-map-2-1, 3, 1px));
-    @include assert-equal(rhythm-top($font-map-4, 0), -5px);
-    @include assert-equal(rhythm-top($font-map-4, -1), -13px);
+    @include assert-equal(rhythm-top($font-map-4, 0), -5.405037px);
+    @include assert-equal(rhythm-top($font-map-4, -1), -13.405037px);
+    @include assert-equal(rhythm-top($font-map-6, 3), 18.596px);
   }
 
   @include test("rhythm-bottom") {
-    @include assert-equal(rhythm-bottom($font-map-3, 3), 5px);
-    @include assert-equal(rhythm-bottom($font-map-4, 3), 5px);
-    @include assert-equal(rhythm-bottom($font-map-4, 3, -1px), 4px);
-    @include assert-equal(rhythm-bottom($font-map-4, 3, 1px), 6px);
+    @include assert-equal(rhythm-bottom($font-map-3, 3), 5.405037px);
+    @include assert-equal(rhythm-bottom($font-map-4, 3), 5.405037px);
+    @include assert-equal(rhythm-bottom($font-map-4, 3, -1px), 4.405037px);
+    @include assert-equal(rhythm-bottom($font-map-4, 3, 1px), 6.405037px);
     @include assert-equal(rhythm-bottom($font-map-2, 3, 1px), rhythm-bottom($font-map-2-1, 3, 1px));
-    @include assert-equal(rhythm-bottom($font-map-4, 0), -19px);
-    @include assert-equal(rhythm-bottom($font-map-4, -1), -27px);
+    @include assert-equal(rhythm-bottom($font-map-4, 0), -18.594963px);
+    @include assert-equal(rhythm-bottom($font-map-4, -1), -26.594963px);
+    @include assert-equal(rhythm-bottom($font-map-6, 3), 5.404px);
   }
 
   @include test("baseline-top") {
@@ -63,9 +66,55 @@
   }
 
   @include test("baseline-between") {
-    @include assert-equal(baseline-between($font-map-3, $font-map-5, 3), 6px);
-    @include assert-equal(baseline-between($font-map-3, $font-map-5, 3, -1px), 5px);
-    @include assert-equal(baseline-between($font-map-3, $font-map-5, 3, 1px), 7px);
+    @include assert-equal(baseline-between($font-map-3, $font-map-5, 3), 5.939695px);
+    @include assert-equal(baseline-between($font-map-3, $font-map-5, 3, -1px), 4.939695px);
+    @include assert-equal(baseline-between($font-map-3, $font-map-5, 3, 1px), 6.939695px);
+  }
+
+  @include test("metric-derived ratios may sit outside the em box") {
+    @include assert-equal(rhythm-top($noto-nastaliq, 3), 22.464px);
+    @include assert-equal(rhythm-bottom($noto-nastaliq, 3), 1.536px);
+  }
+
+  @include test("cap-top") {
+    // Georgia 28px on a 5-rhythm line: trim = 29.7685546875px - 19.400390625px.
+    @include assert-equal(cap-top($georgia-heading, 3), 13.6318359375px);
+    @include assert-equal(cap-top($georgia-heading, 3, -1px), 12.6318359375px);
+    @include assert-equal(cap-top($georgia-body, 1), 1.50390625px);
+  }
+
+  @include test("cap-bottom") {
+    @include assert-equal(cap-bottom($georgia-heading, 0), 10.3681640625px);
+    @include assert-equal(cap-bottom($georgia-heading, 1), 18.3681640625px);
+    @include assert-equal(cap-bottom($georgia-heading, 1, 1px), 19.3681640625px);
+  }
+}
+
+// Property-based checks: these identities are what keeps every block on whole
+// rhythm rows, and they only hold because offsets are never rounded.
+@include test-module("Test invariants:") {
+  @include test("baseline offsets close blocks on whole rows") {
+    @include assert-equal(baseline-top($font-map-3, 3) + rhythm(3) + baseline-bottom($font-map-3, 2), rhythm(5));
+    @include assert-equal(baseline-top($font-map-6, 4) + rhythm(3) + baseline-bottom($font-map-6, 1), rhythm(5));
+    @include assert-equal(baseline-top($font-map-5, 2) + rhythm(2) + baseline-bottom($font-map-5, 2), rhythm(4));
+    @include assert-equal(baseline-top($noto-nastaliq, 3) + rhythm(2) + baseline-bottom($noto-nastaliq, 1), rhythm(3));
+  }
+
+  @include test("above and below offsets partition the line height") {
+    @include assert-equal(baseline-top($font-map-3, 0) + baseline-bottom($font-map-3, 0), -1 * rhythm(3));
+    @include assert-equal(baseline-top($font-map-1, 0) + baseline-bottom($font-map-1, 0), -1 * rhythm(5));
+  }
+
+  @include test("baseline-between compensates both adjacent fonts") {
+    @include assert-equal(
+      baseline-between($font-map-3, $font-map-5, 3),
+      baseline-bottom($font-map-3, 3) + baseline-top($font-map-5, 0)
+    );
+  }
+
+  @include test("cap pair closes blocks on whole rows") {
+    @include assert-equal(cap-top($georgia-heading, 3) + rhythm(5) + cap-bottom($georgia-heading, 0), rhythm(8));
+    @include assert-equal(cap-top($georgia-body, 2) + rhythm(3) + cap-bottom($georgia-body, 1), rhythm(6));
   }
 }
 
@@ -103,8 +152,8 @@
       @include expect {
         font-size: 17px;
         line-height: 24px;
-        margin-top: 5px;
-        margin-bottom: 19px;
+        margin-top: 5.405037px;
+        margin-bottom: 18.594963px;
       }
     }
 
@@ -122,8 +171,8 @@
       @include expect {
         font-size: 17px;
         line-height: 24px;
-        margin-top: 2px;
-        margin-bottom: 6px;
+        margin-top: 2.060305px;
+        margin-bottom: 5.939695px;
       }
     }
 
@@ -143,6 +192,102 @@
         line-height: 24px;
         margin-top: 24px;
         margin-bottom: 24px;
+      }
+    }
+
+    // Metric keys resolve spacing but are never emitted as CSS properties.
+    @include assert {
+      @include output {
+        @include font(
+          $georgia-heading,
+          (
+            padding-top: cap-top 3,
+            padding-bottom: cap-bottom 0
+          )
+        );
+      }
+
+      @include expect {
+        font-size: 28px;
+        line-height: 40px;
+        padding-top: 13.6318359375px;
+        padding-bottom: 10.3681640625px;
+      }
+    }
+  }
+
+  @include test("drop-cap") {
+    // Clean dyadic ratios: span = 24px + 16px * 0.5 = 32px; size = 32px / 0.5;
+    // letter above = (48px - 64px) / 2 + 64px * 0.75 = 40px = target baseline.
+    @include assert {
+      @include output {
+        @include drop-cap($clean-body, 2);
+      }
+
+      @include expect {
+        float: left;
+        position: relative;
+        // stylelint-disable-next-line length-zero-no-unit -- the mixin emits the unit
+        top: 0px;
+        font-size: 64px;
+        line-height: 48px;
+      }
+    }
+
+    // Descender clearance: one extra wrapped body line, in whole rhythms so
+    // the grid stays intact.
+    @include assert {
+      @include output {
+        @include drop-cap($clean-body, 2, $clear-lines: 1);
+      }
+
+      @include expect {
+        float: left;
+        position: relative;
+        // stylelint-disable-next-line length-zero-no-unit -- the mixin emits the unit
+        top: 0px;
+        font-size: 64px;
+        line-height: 48px;
+        margin-bottom: 24px;
+      }
+    }
+
+    // A distinct cap face: solved with its own ratios, extra keys emitted.
+    @include assert {
+      @include output {
+        @include drop-cap($clean-body, 2, $clean-cap-face);
+      }
+
+      @include expect {
+        float: left;
+        position: relative;
+        top: 16px;
+        font-size: 40px;
+        line-height: 48px;
+        font-family: "Display Face", serif;
+      }
+    }
+
+    // Georgia three-line drop cap, mirroring rhythm-gpui's
+    // drop_cap_baseline_lands_on_the_sunk_line test vector.
+    $_cap-height-ratio: math.div(1419, 2048);
+    $_baseline-ratio: math.div(619, 4096);
+    $_span: 2 * 24px + 16px * $_cap-height-ratio;
+    $_cap-font-size: math.div($_span, $_cap-height-ratio);
+    $_cap-baseline-above: math.div(72px - $_cap-font-size, 2) + $_cap-font-size * (1 - $_baseline-ratio);
+    $_target-baseline: 4px + 16px * (1 - $_baseline-ratio) + 2 * 24px;
+
+    @include assert {
+      @include output {
+        @include drop-cap($georgia-body, 3);
+      }
+
+      @include expect {
+        float: left;
+        position: relative;
+        top: $_target-baseline - $_cap-baseline-above;
+        font-size: $_cap-font-size;
+        line-height: 72px;
       }
     }
   }

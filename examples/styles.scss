@@ -1,34 +1,39 @@
-@use "../../src/rhythm" as * with (
-  // Noto serif font family
-  $baseline-ratio: 0.112061
+@use "sass:math";
+@use "../src/rhythm" as * with (
+  // Noto Serif hhea metrics (npx rhythm-sass NotoSerif.ttf); ratio derived automatically
+  $ascent: 1069,
+  $descent: -293,
+  $rhythm-size: 0.5rem
 );
 
-$gutter-width: 16px;
+$gutter-width: 1rem;
 $heading-font: (
-  font-size: 38px,
+  font-size: math.div(38, 16) * 1rem,
   line-height: 6,
   font-weight: 700
 );
 $heading-h2-font: (
-  font-size: 24px,
+  font-size: math.div(24, 16) * 1rem,
   line-height: 4,
   font-weight: 700
 );
 $subheading-font: (
-  font-size: 22px,
+  font-size: math.div(22, 16) * 1rem,
   line-height: 4,
   font-weight: 400
 );
 $paragraph-font: (
-  font-size: 16px,
-  line-height: 3
+  font-size: 1rem,
+  line-height: 3,
+  cap-height-ratio: 0.714
 );
 $card-heading-font: (
-  font-size: 20.5px,
+  font-size: math.div(20.5, 16) * 1rem,
   line-height: 3,
   font-weight: 700
 );
 $card-button-font: (
+  // px font-size in a rem grid: converted automatically via $rem-size (16px)
   font-size: 15px,
   line-height: 2
 );
@@ -39,7 +44,9 @@ $card-button-font: (
 
 body {
   margin: 0;
-  font: 16px/1 "Noto Serif", serif;
+  font:
+    16px/1 "Noto Serif",
+    serif;
 }
 
 h1,
@@ -52,10 +59,7 @@ p {
 
 .container {
   max-width: 640px;
-  padding-top: baseline-top($heading-font, 10);
-  padding-right: $gutter-width;
-  padding-bottom: baseline-bottom($paragraph-font, 7);
-  padding-left: $gutter-width;
+  padding: baseline-top($heading-font, 10) $gutter-width baseline-bottom($paragraph-font, 7);
   margin-right: auto;
   margin-left: auto;
 }
@@ -99,20 +103,25 @@ p {
   }
 }
 
+.paragraph-drop-cap {
+  // Q's tail descends below the anchored baseline; $clear-lines: 1 gives it a
+  // clear wrapped row instead of letting it strike the fourth line.
+  @include drop-cap($paragraph-font, 3, $clear-lines: 1);
+
+  margin-right: rhythm(1);
+}
+
 .fake-image {
   height: rhythm(40);
   margin-top: rhythm-top($paragraph-font, 3);
   margin-bottom: rhythm-bottom($paragraph-font, 5);
-  background: rgba(gray, 0.5);
+  background: rgb(gray, 0.5);
 }
 
 .row {
   display: flex;
   flex-wrap: wrap;
-  margin-top: rhythm-top($paragraph-font, 3);
-  margin-right: -$gutter-width - rhythm(8);
-  margin-bottom: rhythm-bottom($paragraph-font, 2);
-  margin-left: -$gutter-width - rhythm(8);
+  margin: rhythm-top($paragraph-font, 3) (-$gutter-width - rhythm(8)) rhythm-bottom($paragraph-font, 2);
 }
 
 .grid {
@@ -125,7 +134,7 @@ p {
 
 .card {
   padding: rhythm(2, -1px) rhythm(2);
-  border: 1px solid rgba(gray, 0.5);
+  border: 1px solid rgb(gray, 0.5);
   border-radius: 4px;
 
   &__heading {
@@ -149,7 +158,7 @@ p {
   &__fake-image {
     height: rhythm(12);
     margin-bottom: rhythm-bottom($card-heading-font, 4);
-    background: rgba(gray, 0.5);
+    background: rgb(gray, 0.5);
   }
 
   &__button {
@@ -162,7 +171,7 @@ p {
     padding-left: rhythm(3);
     font-family: inherit;
     cursor: pointer;
-    background: rgba(gray, 0.5);
+    background: rgb(gray, 0.5);
     border: none;
     border-radius: 2px;
 

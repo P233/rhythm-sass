@@ -7,9 +7,36 @@
 //  Global Variables  //
 // ------------------ //
 
+// Baseline placement for the primary font: configure either $baseline-ratio
+// directly, or $ascent/$descent (and optionally $units-per-em) from the font's
+// metrics tables to derive the ratio as (upem + |descent| - ascent) / (2 * upem).
+// Both may stay null when every font-map carries its own ratio or metrics.
 $baseline-ratio: null !default;
+$ascent: null !default;
+$descent: null !default;
+$units-per-em: 1000 !default;
 
-@if not lib.is-valid-baseline-ratio($baseline-ratio) {
+@if not lib.is-valid-font-units($units-per-em) or $units-per-em <= 0 {
+  @error "Invalid $units-per-em: #{meta.inspect($units-per-em)}. The value must be a unitless number greater than 0.";
+}
+
+@if lib.is-present($ascent) or lib.is-present($descent) {
+  @if lib.is-present($baseline-ratio) {
+    @error "Invalid configuration: $baseline-ratio and $ascent/$descent are mutually exclusive. Configure one of them.";
+  }
+
+  @if not lib.is-present($ascent) or not lib.is-present($descent) {
+    @error "Invalid configuration: $ascent and $descent must be configured together.";
+  }
+
+  @if not lib.is-valid-font-units($ascent) or $ascent <= 0 {
+    @error "Invalid $ascent: #{meta.inspect($ascent)}. The value must be a unitless number greater than 0, in font units.";
+  }
+
+  @if not lib.is-valid-font-units($descent) {
+    @error "Invalid $descent: #{meta.inspect($descent)}. The value must be a unitless number in font units; both sign conventions are accepted.";
+  }
+} @else if lib.is-present($baseline-ratio) and not lib.is-valid-baseline-ratio($baseline-ratio) {
   @error "Invalid $baseline-ratio: #{meta.inspect($baseline-ratio)}. The value must be a decimal between 0 and 1 (exclusive).";
 }
 
@@ -21,12 +48,22 @@ $rhythm-size: 8px !default;
 
 $rem-size: 16px !default;
 
-@if meta.type-of($rem-size) != number or not lib.has-valid-unit($rem-size) {
-  @error "Invalid $rem-size: #{meta.inspect($rem-size)}. The value must be a number in an absolute length unit or the rem unit.";
+@if meta.type-of($rem-size) != number or not lib.has-valid-unit($rem-size) or math.unit($rem-size) == "rem" {
+  @error "Invalid $rem-size: #{meta.inspect($rem-size)}. The value must be a number in an absolute length unit.";
+}
+
+@if $rem-size <= 0 {
+  @error "Invalid $rem-size: #{meta.inspect($rem-size)}. The value must be greater than 0.";
+}
+
+$__resolved-baseline-ratio: $baseline-ratio;
+
+@if lib.is-present($ascent) {
+  $__resolved-baseline-ratio: lib.baseline-ratio-from-metrics($ascent, $descent, $units-per-em);
 }
 
 $__config: (
-  baseline-ratio: $baseline-ratio,
+  baseline-ratio: $__resolved-baseline-ratio,
   rhythm-size: $rhythm-size,
   rem-size: $rem-size
 );
@@ -79,9 +116,35 @@ $__config: (
   @return baseline-top($font-map, $rhythms, $offset);
 }
 
+// Lands the cap ink top -- not the baseline -- on the nth grid line, for
+// openings where the eye measures ink to edge. Requires cap-height-ratio in
+// the font-map. Close the block with cap-bottom (not baseline-bottom) so it
+// still spans a whole number of rhythms and everything after stays in rhythm.
+@function cap-top($font-map, $rhythms, $offset: 0) {
+  $_font-map: lib.ensure-valid-font-map($font-map);
+  $_rhythms: lib.ensure-valid-rhythms($rhythms);
+  $_height: $rhythm-size * $_rhythms - lib.calc-cap-trim-top($_font-map, $__config);
+  $_offset: lib.ensure-valid-offset($offset);
+
+  @return lib.calc-height-with-offset($_height, $_offset);
+}
+
+// Pairs with cap-top: returns at the bottom exactly what cap-top trimmed at
+// the top, so the block occupies a whole number of rhythms.
+@function cap-bottom($font-map, $rhythms, $offset: 0) {
+  $_font-map: lib.ensure-valid-font-map($font-map);
+  $_rhythms: lib.ensure-valid-rhythms($rhythms);
+  $_height: $rhythm-size * $_rhythms + lib.calc-cap-trim-top($_font-map, $__config);
+  $_offset: lib.ensure-valid-offset($offset);
+
+  @return lib.calc-height-with-offset($_height, $_offset);
+}
+
 // -------- //
 //  Mixins  //
 // -------- //
+
+$__non-css-keys: (font-size, line-height, baseline-ratio, ascent, descent, units-per-em, cap-height-ratio);
 
 @mixin font($font-map, $spacing-map: ()) {
   $_font-map: lib.ensure-valid-font-map($font-map);
@@ -89,7 +152,7 @@ $__config: (
   font-size: map.get($_font-map, font-size);
   line-height: $rhythm-size * map.get($_font-map, line-height);
 
-  @each $_property in map.keys(map.remove($_font-map, font-size, line-height, baseline-ratio)) {
+  @each $_property in map.keys(map.remove($_font-map, $__non-css-keys...)) {
     #{$_property}: map.get($_font-map, $_property);
   }
 
@@ -99,7 +162,7 @@ $__config: (
     $_function-args: lib.rest($_value);
 
     @if $_property == "margin-top" or $_property == "padding-top" {
-      @if $_function-name == "baseline-top" {
+      @if $_function-name == "baseline-top" or $_function-name == "cap-top" {
         $_result: meta.call(meta.get-function($_function-name), $_font-map, $_function-args...);
       } @else if $_function-name == "rhythm" {
         $_result: meta.call(meta.get-function($_function-name), $_function-args...);
@@ -108,17 +171,17 @@ $__config: (
         $_rest-args: lib.rest($_function-args);
         $_result: meta.call(meta.get-function($_function-name), $_font-map-above, $_font-map, $_rest-args...);
       } @else {
-        @error "Unsupported function #{meta.inspect($_function-name)} in #{meta.inspect($_property)}. Supported functions: rhythm, baseline-top, baseline-between.";
+        @error "Unsupported function #{meta.inspect($_function-name)} in #{meta.inspect($_property)}. Supported functions: rhythm, baseline-top, cap-top, baseline-between.";
       }
     } @else if $_property == "margin-bottom" or $_property == "padding-bottom" {
-      @if $_function-name == "baseline-bottom" {
+      @if $_function-name == "baseline-bottom" or $_function-name == "cap-bottom" {
         $_result: meta.call(meta.get-function($_function-name), $_font-map, $_function-args...);
       } @else if $_function-name == "rhythm" {
         $_result: meta.call(meta.get-function($_function-name), $_function-args...);
       } @else if $_function-name == "baseline-between" {
         $_result: meta.call(meta.get-function($_function-name), $_font-map, $_function-args...);
       } @else {
-        @error "Unsupported function #{meta.inspect($_function-name)} in #{meta.inspect($_property)}. Supported functions: rhythm, baseline-bottom, baseline-between.";
+        @error "Unsupported function #{meta.inspect($_function-name)} in #{meta.inspect($_property)}. Supported functions: rhythm, baseline-bottom, cap-bottom, baseline-between.";
       }
     } @else {
       @error "Unsupported property #{meta.inspect($_property)} in #{meta.inspect($spacing-map)}.";
@@ -129,6 +192,80 @@ $__config: (
     }
 
     #{$_property}: $_result;
+  }
+}
+
+// Solves a drop cap sunk $lines lines deep into text set in $font-map: the cap
+// spans from the first line's cap top down to the $lines-th baseline. Apply to
+// a real wrapper so the relative baseline inset is portable across browsers.
+// $cap-font-map optionally provides
+// the cap face's own metrics and CSS properties (e.g. font-family); its
+// font-size and line-height are solved here and therefore ignored.
+// $clear-lines reserves extra wrapped body lines below the letter so a
+// descender tail (Q, J) gets its own clear row instead of striking the
+// following line.
+@mixin drop-cap($font-map, $lines, $cap-font-map: null, $clear-lines: 0) {
+  $_font-map: lib.ensure-valid-font-map($font-map);
+
+  @if not lib.is-valid-rhythms($lines) or $lines < 1 {
+    @error "Invalid $lines: #{meta.inspect($lines)}. The value must be a positive unitless integer.";
+  }
+
+  @if not lib.is-valid-rhythms($clear-lines) or $clear-lines < 0 {
+    @error "Invalid $clear-lines: #{meta.inspect($clear-lines)}. The value must be a non-negative unitless integer.";
+  }
+
+  $_cap-face: $_font-map;
+
+  @if lib.is-present($cap-font-map) {
+    $_cap-face: lib.ensure-valid-cap-face-map($cap-font-map);
+  }
+
+  $_font-size: lib.convert-to-rhythm-unit(map.get($_font-map, font-size), $__config);
+  $_line-height: $rhythm-size * map.get($_font-map, line-height);
+
+  // Missing cap-height-ratio falls back to the classic 0.7em approximation,
+  // which can only misplace the visual top; the baseline anchor stays exact.
+  $_body-cap-height-ratio: map.get($_font-map, cap-height-ratio);
+
+  @if not lib.is-present($_body-cap-height-ratio) {
+    $_body-cap-height-ratio: 0.7;
+  }
+
+  $_cap-height-ratio: map.get($_cap-face, cap-height-ratio);
+
+  @if not lib.is-present($_cap-height-ratio) {
+    $_cap-height-ratio: 0.7;
+  }
+
+  $_body-cap-height: $_font-size * $_body-cap-height-ratio;
+  $_cap-baseline-ratio: lib.get-baseline-ratio($_cap-face, $__config);
+  $_span: ($lines - 1) * $_line-height + $_body-cap-height;
+  $_cap-font-size: math.div($_span, $_cap-height-ratio);
+  $_cap-line-height: $lines * $_line-height;
+  $_cap-baseline-above: math.div($_cap-line-height - $_cap-font-size, 2) + $_cap-font-size * (1 - $_cap-baseline-ratio);
+  $_target-baseline: lib.calc-baseline-above-height($_font-map, $__config) + ($lines - 1) * $_line-height;
+
+  float: left;
+
+  // The anchor is a relative inset, not a margin: for cap-heavy faces
+  // (cap height > ascent - descent) the offset is downward, and a margin
+  // would push the following content off the grid.
+  position: relative;
+  top: $_target-baseline - $_cap-baseline-above;
+  font-size: $_cap-font-size;
+  line-height: $_cap-line-height;
+
+  @if $clear-lines > 0 {
+    // Floats exclude text per whole line box, so clearance counts in body
+    // lines; the margin extends the exclusion area without moving the glyph.
+    margin-bottom: $clear-lines * $_line-height;
+  }
+
+  @if lib.is-present($cap-font-map) {
+    @each $_property in map.keys(map.remove($_cap-face, $__non-css-keys...)) {
+      #{$_property}: map.get($_cap-face, $_property);
+    }
   }
 }
 

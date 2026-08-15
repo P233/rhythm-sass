@@ -1,4 +1,5 @@
 @use "sass:map";
+@use "sass:math";
 @use "sass:meta";
 @use "true" as *;
 @use "font-maps" as *;
@@ -31,6 +32,27 @@ $config: (
     @include assert-equal(is-valid-rhythms(""), false);
   }
 
+  @include test("is-valid-font-units") {
+    @include assert-equal(is-valid-font-units(1069), true);
+    @include assert-equal(is-valid-font-units(-293), true);
+    @include assert-equal(is-valid-font-units(1069px), false);
+    @include assert-equal(is-valid-font-units("1069"), false);
+  }
+
+  @include test("is-present") {
+    @include assert-equal(is-present(null), false);
+    @include assert-equal(is-present(false), true);
+    @include assert-equal(is-present(0), true);
+  }
+
+  @include test("is-valid-positive-ratio") {
+    @include assert-equal(is-valid-positive-ratio(0), false);
+    @include assert-equal(is-valid-positive-ratio(-0.1), false);
+    @include assert-equal(is-valid-positive-ratio(1), true);
+    @include assert-equal(is-valid-positive-ratio(1.1), true);
+    @include assert-equal(is-valid-positive-ratio(1px), false);
+  }
+
   @include test("has-valid-unit") {
     @include assert-equal(has-valid-unit(1px), true);
     @include assert-equal(has-valid-unit(1rem), true);
@@ -48,6 +70,20 @@ $config: (
     );
 
     @include assert-equal(ensure-valid-font-map($_font-map), $_font-map);
+    @include assert-equal(ensure-valid-font-map($font-map-6), $font-map-6);
+    @include assert-equal(ensure-valid-font-map($georgia-body), $georgia-body);
+  }
+
+  @include test("ensure-valid-cap-face-map") {
+    @include assert-equal(ensure-valid-cap-face-map($clean-cap-face), $clean-cap-face);
+    @include assert-equal(ensure-valid-cap-face-map($georgia-body), $georgia-body);
+
+    $_over-em-cap: (
+      baseline-ratio: 0.5,
+      cap-height-ratio: 1.1
+    );
+
+    @include assert-equal(ensure-valid-cap-face-map($_over-em-cap), $_over-em-cap);
   }
 
   @include test("ensure-valid-rhythms") {
@@ -56,7 +92,6 @@ $config: (
 
   @include test("ensure-valid-offset") {
     @include assert-equal(ensure-valid-offset(0), 0);
-    @include assert-equal(ensure-valid-offset(0.112061), 0.112061);
     @include assert-equal(ensure-valid-offset(1px), 1px);
     @include assert-equal(ensure-valid-offset(-1px), -1px);
     @include assert-equal(ensure-valid-offset(1rem), 1rem);
@@ -65,9 +100,11 @@ $config: (
 }
 
 @include test-module("Test calculation functions:") {
-  @include test("convert-font-size-to-rhythm-unit") {
-    @include assert-equal(convert-font-size-to-rhythm-unit(10px, $config), 10px);
-    @include assert-equal(convert-font-size-to-rhythm-unit(1rem, $config), 16px);
+  @include test("convert-to-rhythm-unit") {
+    @include assert-equal(convert-to-rhythm-unit(10px, $config), 10px);
+    @include assert-equal(convert-to-rhythm-unit(1rem, $config), 16px);
+    @include assert-equal(convert-to-rhythm-unit(12pt, $config), 16px);
+    @include assert-equal(convert-to-rhythm-unit(16pt, $config), math.div(64px, 3));
 
     $config-1: map.merge(
       $config,
@@ -76,7 +113,9 @@ $config: (
       )
     );
 
-    @include assert-equal(convert-font-size-to-rhythm-unit(16px, $config-1), 1rem);
+    @include assert-equal(convert-to-rhythm-unit(16px, $config-1), 1rem);
+    @include assert-equal(convert-to-rhythm-unit(24px, $config-1), 1.5rem);
+    @include assert-equal(convert-to-rhythm-unit(12pt, $config-1), 1rem);
 
     $config-2: map.merge(
       $config,
@@ -85,27 +124,22 @@ $config: (
       )
     );
 
-    @include assert-equal(convert-font-size-to-rhythm-unit(16pt, $config-2), 16pt);
+    @include assert-equal(convert-to-rhythm-unit(16pt, $config-2), 16pt);
+    @include assert-equal(convert-to-rhythm-unit(16px, $config-2), 12pt);
   }
 
-  @include test("calc-baseline-above-height") {
-    @include assert-equal(calc-baseline-above-height($font-map-1, $config), 29px);
-  }
+  @include test("baseline-ratio-from-metrics") {
+    // Noto Serif: ratio (1000 + 293 - 1069) / 2000; both descent signs accepted.
+    @include assert-equal(baseline-ratio-from-metrics(1069, -293, 1000), 0.112);
+    @include assert-equal(baseline-ratio-from-metrics(1069, 293, 1000), 0.112);
+    @include assert-equal(baseline-ratio-from-metrics(1069, -293), 0.112);
 
-  @include test("calc-baseline-below-depth") {
-    @include assert-equal(calc-baseline-below-depth($font-map-1, $config), 11px);
-  }
+    // Georgia: (2048 + 449 - 1878) / 4096.
+    @include assert-equal(baseline-ratio-from-metrics(1878, -449, 2048), math.div(619, 4096));
 
-  @include test("calc-height-with-offset") {
-    @include assert-equal(calc-height-with-offset(20px, 0), 20px);
-    @include assert-equal(calc-height-with-offset(20px, 1px), 21px);
-    @include assert-equal(calc-height-with-offset(20px, -1px), 19px);
-    @include assert-equal(meta.inspect(calc-height-with-offset(2rem, 1px)), meta.inspect(calc(2rem + 1px)));
-    @include assert-equal(meta.inspect(calc-height-with-offset(2rem, -1px)), meta.inspect(calc(2rem - 1px)));
-    @include assert-equal(calc-height-with-offset(0, 0), 0);
-    @include assert-equal(calc-height-with-offset(-5px, 0), -5px);
-    @include assert-equal(calc-height-with-offset(2rem, 0), 2rem);
-    @include assert-equal(calc-height-with-offset(2rem, 0.5rem), 2.5rem);
+    // Valid vertical metrics can extend beyond the em box.
+    @include assert-equal(baseline-ratio-from-metrics(1904, -596, 1000), -0.154);
+    @include assert-equal(baseline-ratio-from-metrics(2076, -636, 1440), 0);
   }
 
   @include test("get-baseline-ratio") {
@@ -121,11 +155,46 @@ $config: (
 
     @include assert-equal(get-baseline-ratio($_font-map-with-ratio, $config), 0.2);
     @include assert-equal(get-baseline-ratio($_font-map-without-ratio, $config), 0.112061);
+    @include assert-equal(get-baseline-ratio($font-map-6, $config), 0.112);
+    @include assert-equal(get-baseline-ratio($georgia-body, $config), math.div(619, 4096));
+    @include assert-equal(get-baseline-ratio($noto-nastaliq, $config), -0.154);
+  }
+
+  @include test("calc-baseline-above-height") {
+    // (40px - 24px) / 2 + 24px * (1 - 0.112061); no whole-pixel rounding.
+    @include assert-equal(calc-baseline-above-height($font-map-1, $config), 29.310536px);
+  }
+
+  @include test("calc-baseline-below-depth") {
+    @include assert-equal(calc-baseline-below-depth($font-map-1, $config), 10.689464px);
   }
 
   @include test("calc-baseline-offset") {
-    @include assert-equal(calc-baseline-offset($font-map-1, $config, "above"), 29px);
-    @include assert-equal(calc-baseline-offset($font-map-1, $config, "below"), 11px);
+    @include assert-equal(calc-baseline-offset($font-map-1, $config, "above"), 29.310536px);
+    @include assert-equal(calc-baseline-offset($font-map-1, $config, "below"), 10.689464px);
+
+    // The exact offsets partition the line height.
+    @include assert-equal(
+      calc-baseline-offset($font-map-1, $config, "above") + calc-baseline-offset($font-map-1, $config, "below"),
+      40px
+    );
+  }
+
+  @include test("calc-cap-trim-top") {
+    // above = 6px + 28px * (1 - 619/4096); cap height = 28px * 1419/2048.
+    @include assert-equal(calc-cap-trim-top($georgia-heading, $config), 10.3681640625px);
+  }
+
+  @include test("calc-height-with-offset") {
+    @include assert-equal(calc-height-with-offset(20px, 0), 20px);
+    @include assert-equal(calc-height-with-offset(20px, 1px), 21px);
+    @include assert-equal(calc-height-with-offset(20px, -1px), 19px);
+    @include assert-equal(meta.inspect(calc-height-with-offset(2rem, 1px)), meta.inspect(calc(2rem + 1px)));
+    @include assert-equal(meta.inspect(calc-height-with-offset(2rem, -1px)), meta.inspect(calc(2rem - 1px)));
+    @include assert-equal(calc-height-with-offset(0, 0), 0);
+    @include assert-equal(calc-height-with-offset(-5px, 0), -5px);
+    @include assert-equal(calc-height-with-offset(2rem, 0), 2rem);
+    @include assert-equal(calc-height-with-offset(2rem, 0.5rem), 2.5rem);
   }
 }
 

@@ -1,0 +1,31 @@
+@use "true" as *;
+@use "../src/rhythm" as * with (
+  // Noto Serif hhea metrics; the derived ratio is (1000 + 293 - 1069) / 2000 = 0.112.
+  $ascent: 1069,
+  $descent: -293
+);
+
+@include test-module("Test global metrics configuration:") {
+  @include test("derives the baseline ratio from $ascent and $descent") {
+    $_font-map: (
+      font-size: 17px,
+      line-height: 3
+    );
+
+    @include assert-equal(rhythm-top($_font-map, 3), 18.596px);
+    @include assert-equal(rhythm-bottom($_font-map, 3), 5.404px);
+  }
+
+  @include test("font-map metrics still override the global metrics") {
+    $_font-map: (
+      font-size: 16px,
+      line-height: 3,
+      ascent: 1878,
+      descent: -449,
+      units-per-em: 2048
+    );
+
+    // Georgia ratio 619/4096: below = 4px + 16px * (619/4096).
+    @include assert-equal(rhythm-top($_font-map, 3), 17.58203125px);
+  }
+}
