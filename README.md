@@ -86,7 +86,7 @@ NotoSerif.ttf — Noto Serif Regular
 
 A font carries several candidate sets of vertical metrics. [CSS Inline Layout](https://www.w3.org/TR/css-inline-3/#ascent-descent) recommends `OS/2` typo metrics when available and `hhea` as a fallback, but browser engines and legacy platform APIs can differ; `USE_TYPO_METRICS` is a signal, not a universal selector. Compare the rows and verify the metric set used by your target runtime. `OS/2` win values are primarily clipping metrics.
 
-Metric-derived ratios may legitimately fall outside `0..1` when a font extends beyond its em box; keep the printed `ascent`/`descent` keys rather than copying such a derived value into `baseline-ratio`. For variable fonts, the command reports the default instance and warns when axis-specific MVAR metrics may differ. WOFF/WOFF2 files must be decompressed to TTF/OTF first (e.g. with fontTools).
+Metric-derived ratios may legitimately fall outside `0..1` when a font extends beyond its em box (e.g. Noto Nastaliq Urdu, or math extension faces); the command flags such rows inline. Keep the printed `ascent`/`descent` keys in that case — `baseline-ratio` only accepts measured values between `0` and `1`. For variable fonts, the command reports the default instance and warns when axis-specific MVAR metrics may differ. WOFF/WOFF2 files must be decompressed to TTF/OTF first (e.g. with fontTools).
 
 ## The font-map
 

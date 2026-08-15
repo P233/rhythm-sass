@@ -128,6 +128,7 @@ const collectionPath = fixture(
   buildCollection([buildFont({ name: "Collection One" }), buildFont({ name: "Collection Two" })]),
 );
 const variablePath = fixture("variable.ttf", buildFont({ capHeight: 1100, variable: true }));
+const overEmPath = fixture("over-em.ttf", buildFont({ hheaAscent: 1904 }));
 const hostileNamePath = fixture("hostile.ttf", buildFont({ name: "\u001b]0;OWNED\u0007" }));
 const unusableTypoPath = fixture("unusable-typo.ttf", buildFont({ typoAscent: 0 }));
 const unusableTypoHheaPath = fixture("unusable-typo-hhea.ttf", buildFont({ typoAscent: 0, hheaAscent: 0 }));
@@ -226,6 +227,13 @@ describe("rhythm-sass CLI", () => {
     expect(result.status).toBe(0);
     expect(result.stdout).not.toMatch(/[\u001b\u0007]/u);
     expect(result.stdout).toContain("�]0;OWNED�");
+  });
+
+  test("flags derived ratios outside 0..1 inline", () => {
+    const result = run(overEmPath);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toMatch(/hhea.*baseline-ratio -0\.352000.*outside 0\.\.1 — copy the ascent\/descent keys/);
+    expect(result.stdout).toMatch(/OS\/2 typo.*baseline-ratio 0\.220000$/m);
   });
 
   test("accepts over-em cap heights and flags variable defaults", () => {

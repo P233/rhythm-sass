@@ -179,7 +179,6 @@ function parseFile(buffer) {
 const baselineRatio = (ascent, descent, upem) => (upem + Math.abs(descent) - ascent) / (2 * upem);
 const fmt = (n) => n.toFixed(6);
 const heightRatio = (height, upem) => (height > 0 ? fmt(height / upem) : null);
-const metricRatio = (ascent, descent, upem) => (ascent > 0 ? fmt(baselineRatio(ascent, descent, upem)) : null);
 
 function report(file, face, index, total) {
   const label = total > 1 ? ` [face ${index + 1}/${total}]` : "";
@@ -193,9 +192,13 @@ function report(file, face, index, total) {
   console.log(title);
   console.log(`  units-per-em  ${face.upem}`);
   for (const [source, ascent, descent] of rows) {
-    const ratio = metricRatio(ascent, descent, face.upem) ?? "not usable";
+    const value = ascent > 0 ? baselineRatio(ascent, descent, face.upem) : null;
+    const ratio = value === null ? "not usable" : fmt(value);
+    // Sass's $baseline-ratio only accepts 0..1 (exclusive); derived values
+    // outside that range are legitimate but must travel as metrics keys.
+    const note = value !== null && (value <= 0 || value >= 1) ? "  (outside 0..1 — copy the ascent/descent keys, not this value)" : "";
     console.log(
-      `  ${source.padEnd(12)}  ascent ${String(ascent).padEnd(6)} descent ${String(descent).padEnd(6)} baseline-ratio ${ratio}`,
+      `  ${source.padEnd(12)}  ascent ${String(ascent).padEnd(6)} descent ${String(descent).padEnd(6)} baseline-ratio ${ratio}${note}`,
     );
   }
   const capRatio = face.os2 ? heightRatio(face.os2.capHeight, face.upem) : null;

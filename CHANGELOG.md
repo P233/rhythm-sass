@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.0.1] - 2026-08-15
+
+### Changed
+- The CLI now flags metric rows whose derived baseline ratio falls outside `0..1` directly in the output (e.g. Noto Nastaliq Urdu, Zapfino's win metrics, STIX math faces), pointing to the `ascent`/`descent` keys instead of a ratio value that `$baseline-ratio` would reject.
+
 ## [2.0.0] - 2026-08-15
 
 ### Breaking
