@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Zero-dependency font metrics reader: prints the baseline-ratio and
-// cap-height-ratio values rhythm-sass needs, straight from TTF/OTF tables.
+// Zero-dependency font metrics reader: prints the vertical metrics, baseline
+// ratios and cap-height ratio rhythm-sass needs, straight from TTF/OTF tables.
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 

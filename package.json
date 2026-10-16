@@ -1,6 +1,6 @@
 {
   "name": "rhythm-sass",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Print-inspired vertical rhythm for the web — baseline offsets computed from real font metrics.",
   "main": "./src/rhythm.scss",
   "sass": "./src/rhythm.scss",

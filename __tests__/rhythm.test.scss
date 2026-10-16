@@ -216,6 +216,28 @@
     }
   }
 
+  @include test("drop-cap-metrics") {
+    // The same solutions the drop-cap mixin emits below, returned as values.
+    // stylelint-disable length-zero-no-unit -- the function returns the unit
+    @include assert-equal(
+      drop-cap-metrics($clean-body, 2),
+      (
+        font-size: 64px,
+        line-height: 48px,
+        top: 0px
+      )
+    );
+    // stylelint-enable length-zero-no-unit
+    @include assert-equal(
+      drop-cap-metrics($clean-body, 2, $clean-cap-face),
+      (
+        font-size: 40px,
+        line-height: 48px,
+        top: 16px
+      )
+    );
+  }
+
   @include test("drop-cap") {
     // Clean dyadic ratios: span = 24px + 16px * 0.5 = 32px; size = 32px / 0.5;
     // letter above = (48px - 64px) / 2 + 64px * 0.75 = 40px = target baseline.

@@ -6,13 +6,15 @@
 
 ![rhythm-sass](./docs/logo.png)
 
-Print-inspired vertical rhythm for the web — baseline offsets computed from real font metrics. rhythm-sass lands every text baseline exactly on a vertical rhythm grid, giving front-end developers pixel-perfect control over typographic layout. It builds on concepts introduced by [Plumber](https://jamonserrano.github.io/plumber-sass/); a Rust port for gpui apps is available as [rhythm-gpui](https://github.com/p233/rhythm-gpui).
+rhythm-sass is a Sass library for print-inspired vertical rhythm on the web: it computes the spacing that puts every text baseline on a vertical rhythm grid, with baseline offsets derived from the font's own metrics. It builds on concepts introduced by [Plumber](https://jamonserrano.github.io/plumber-sass/), and [rhythm-gpui](https://github.com/p233/rhythm-gpui) ports it to Rust for gpui apps.
 
-Unlike Plumber, **no hand-measured baseline ratio is required**: feed the library the `ascent`, `descent`, and `units-per-em` values from the font's metrics tables (the bundled `npx rhythm-sass` command reads them for you) and the ratio is derived automatically. Measured `baseline-ratio` values from [Plumber's tables](https://jamonserrano.github.io/plumber-sass/baselines/) remain fully supported. For a deeper dive, check out [this detailed post](https://peiwen.lu/posts/rhythm-sass).
+No baseline ratio has to be measured by hand: rhythm-sass derives it from the `ascent`, `descent` and `units-per-em` values in the font's metrics tables, which the bundled `npx rhythm-sass` command reads for you. A measured `baseline-ratio` still works, and [the rhythm-sass post](https://peiwen.lu/posts/rhythm-sass) explains the model behind the ratio.
+
+rhythm-sass works in Sass at build time and covers type and the spacing around it. It does not fit images or other media to the grid, and it does not correct for how each browser rounds a baseline; [Functions](#functions) explains where browsers differ.
 
 ## Installation
 
-To install rhythm-sass using npm, execute the following command:
+Install it from npm:
 
 ```
 npm install --save-dev rhythm-sass
@@ -30,7 +32,7 @@ npm install --save-dev rhythm-sass
   $rem-size: 16px              // optional
 );
 
-// Option 2: A measured ratio works exactly as before
+// Option 2: A measured ratio instead of metrics
 @use "pkg:rhythm-sass" as * with (
   $baseline-ratio: 0.112061    // mutually exclusive with $ascent/$descent
 );
@@ -47,17 +49,17 @@ npm install --save-dev rhythm-sass
 }
 ```
 
-> **Note:** The `pkg:` URL syntax requires Sass 1.71+ and a bundler that supports it (Vite, webpack 5, etc.). If your toolchain does not support `pkg:` URLs yet, use `"rhythm-sass"` directly.
+> **Note:** The `pkg:` URL syntax requires Sass 1.71+ and a bundler that supports it, such as Vite or webpack 5. If your toolchain does not support `pkg:` URLs yet, use `"rhythm-sass"` directly.
 
 This library exposes the following global variables:
 
 - `$ascent`, `$descent`, `$units-per-em` specify the primary font's vertical metrics in font units, as reported by its metrics tables. The baseline ratio is derived as `(units-per-em + |descent| - ascent) / (2 * units-per-em)`; descent is accepted in either sign convention. `$units-per-em` defaults to `1000`.
 
-- `$baseline-ratio` specifies the baseline ratio for the primary font directly, e.g. `0.112061` for Noto Serif. Configure either this or the metrics above, not both. All of them may be omitted when every font-map carries its own ratio or metrics.
+- `$baseline-ratio` specifies the baseline ratio for the primary font directly, such as `0.112061` for Noto Serif. Configure either this or the metrics above, not both. All of them may be omitted when every font-map carries its own ratio or metrics.
 
 - `$rhythm-size` specifies the base unit height for the vertical rhythm grid. The default value is `8px`.
 
-- `$rem-size` specifies the reference value for calculating `rem` units, in an absolute length unit. The default value is `16px`. Ignore this setting if you don't use the `rem` unit.
+- `$rem-size` specifies the reference value for calculating `rem` units, in an absolute length unit. The default value is `16px`. Ignore this setting if you do not use the `rem` unit.
 
 ## Measuring fonts
 
@@ -86,11 +88,11 @@ NotoSerif.ttf — Noto Serif Regular
 
 A font carries several candidate sets of vertical metrics. [CSS Inline Layout](https://www.w3.org/TR/css-inline-3/#ascent-descent) recommends `OS/2` typo metrics when available and `hhea` as a fallback, but browser engines and legacy platform APIs can differ; `USE_TYPO_METRICS` is a signal, not a universal selector. Compare the rows and verify the metric set used by your target runtime. `OS/2` win values are primarily clipping metrics.
 
-Metric-derived ratios may legitimately fall outside `0..1` when a font extends beyond its em box (e.g. Noto Nastaliq Urdu, or math extension faces); the command flags such rows inline. Keep the printed `ascent`/`descent` keys in that case — `baseline-ratio` only accepts measured values between `0` and `1`. For variable fonts, the command reports the default instance and warns when axis-specific MVAR metrics may differ. WOFF/WOFF2 files must be decompressed to TTF/OTF first (e.g. with fontTools).
+Metric-derived ratios may legitimately fall outside `0..1` when a font extends beyond its em box (such as Noto Nastaliq Urdu or math extension faces); the command flags such rows inline. Keep the printed `ascent`/`descent` keys in that case, since `baseline-ratio` accepts only measured values between `0` and `1`. For variable fonts, the command reports the default instance and warns when axis-specific MVAR metrics may differ. WOFF/WOFF2 files must be decompressed to TTF/OTF first, with fontTools for example.
 
 ## The font-map
 
-This library requires you to define your typography settings in Sass maps, referred to as **font-maps**. Here's an example of a font-map definition:
+This library reads your typography settings from Sass maps called **font-maps**. For example:
 
 ```scss
 $heading-font: (
@@ -106,23 +108,25 @@ $heading-font: (
 
 - `font-size` corresponds to the CSS `font-size` property. Any absolute length unit or `rem` is accepted and converted to the `$rhythm-size` unit automatically.
 
-- `line-height` corresponds to the CSS `line-height` property but with a specialized implementation. It accepts only integers, representing the number of rhythm grids. For example, `line-height: 5` equals `5` times the global `$rhythm-size` variable. _Using rhythms for `line-height` ensures proper vertical alignment across multiple lines._
+- `line-height` corresponds to the CSS `line-height` property, counted in rhythm grids: it accepts only integers, and `line-height: 5` is five times the global `$rhythm-size`. Whole rhythms keep every following line of a block on the grid.
 
-- `ascent`, `descent`, `units-per-em` provide the font's own metrics, overriding the global configuration for this font — the natural choice for a secondary typeface.
+- `ascent`, `descent`, `units-per-em` provide the font's own metrics, overriding the global configuration for this font; a secondary typeface usually needs them.
 
 - `baseline-ratio` overrides the global configuration with a measured ratio between `0` and `1` instead. A font-map may carry either metrics or `baseline-ratio`, not both.
 
 - `cap-height-ratio` specifies the positive capital height relative to the em size (`sCapHeight / units-per-em`, printed by `npx rhythm-sass`). It can be `1` or greater when capitals extend beyond the em box. It is required by the `cap-top()`/`cap-bottom()` functions and refines the `drop-cap` mixin.
 
-You can include additional CSS properties like `font-family` or `letter-spacing` in your font-map. These extra properties are specifically used with the `font` mixin (explained in a later section); metric keys are never emitted as CSS. However, do not include `padding` and `margin`, as these will be separately calculated by the rhythm-sass functions to determine precise offsets, ensuring text baselines align perfectly with the vertical rhythm grid.
+A font-map may also carry other CSS properties, such as `font-family` or `letter-spacing`. The [`font`](#fontfont-map-spacing-map) mixin emits them and never emits the metric keys. Leave out `padding` and `margin`: the spacing functions calculate them.
 
-Create a font-map for each type of text, such as headings, subheadings, paragraphs, or code, to keep your typography styles organized and reusable.
+Create a font-map for each type of text, such as headings, subheadings, paragraphs or code, to keep your typography styles organized and reusable.
 
 ## Functions
 
-Functions use the `font-size`, `line-height`, and ratio values from the provided font-map for calculations, producing results in the global `$rhythm-size` unit.
+Functions use the `font-size`, `line-height` and ratio values from the provided font-map for calculations, producing results in the global `$rhythm-size` unit.
 
-Results are exact to Sass's number precision — offsets are never rounded to whole pixels. Rounding the above/below offsets independently would break the `above + below == line-height` identity that keeps every block on whole rhythm rows; browsers handle fractional lengths through subpixel rendering.
+Results are exact to Sass's number precision: offsets are never rounded to whole pixels. Rounding the above/below offsets independently would break the `above + below == line-height` identity that keeps every block on whole rhythm rows.
+
+Browsers do not all paint a fractional baseline on the same pixel, though. Measured on macOS, Chromium rounds a font's ascent and descent to whole pixels before centering them in the line box, Firefox rounds them up, and WebKit keeps the exact value. Many sizes land on the same pixel in all three. Where one does not, as can happen with a large drop cap, [`drop-cap-metrics()`](#drop-cap-metricsfont-map-lines-cap-font-map-null) exposes the solved values so a stylesheet can adjust them.
 
 ### `rhythm($rhythms, $offset: 0)`
 
@@ -151,7 +155,7 @@ The `baseline-top()` function calculates the spacing from the top of the font's 
 - `$rhythms`: The number of rhythm grids between the baseline and the target rhythm grid above it.
 - `$offset` (optional): Adjusts the calculated spacing.
 
-`rhythm-bottom()` is an alias for `baseline-top()`, providing a more intuitive naming option. It calculates the spacing from the top of the nth rhythm grid above the baseline to the top of the font's line-height.
+`rhythm-bottom()` is the same function under a name that reads from the grid line: the spacing from the top of the nth rhythm grid above the baseline to the top of the font's line-height.
 
 ### `baseline-bottom($font-map, $rhythms, $offset: 0)` <br/> `rhythm-top($font-map, $rhythms, $offset: 0)`
 
@@ -163,7 +167,7 @@ The `baseline-bottom()` function calculates the spacing from the bottom of the f
 - `$rhythms`: The number of rhythm grids between the baseline and the target rhythm grid below it.
 - `$offset` (optional): Adjusts the calculated spacing.
 
-`rhythm-top()` is an alias for `baseline-bottom()`, providing a more intuitive naming option. It calculates the spacing from the bottom of the nth rhythm grid below baseline to the bottom of the font's line-height.
+`rhythm-top()` is the same function under a name that reads from the grid line: the spacing from the bottom of the nth rhythm grid below the baseline to the bottom of the font's line-height.
 
 ### `baseline-between($font-map-above, $font-map-below, $rhythms, $offset: 0)`
 
@@ -178,9 +182,9 @@ The `baseline-between()` function calculates the spacing between two fonts, from
 
 ### `cap-top($font-map, $rhythms, $offset: 0)` <br/> `cap-bottom($font-map, $rhythms, $offset: 0)`
 
-The `cap-top()` function lands the capital letters' **ink**, rather than the baseline, on the nth grid line — the grid-woven analog of CSS `text-box-trim: trim-start` with `text-box-edge: cap`, for openings where the eye measures ink to edge (heroes, cards, page tops). It requires a `cap-height-ratio` key in the font-map.
+The `cap-top()` function lands the capital letters' **ink**, rather than the baseline, on the nth grid line. It is the grid-woven analog of CSS `text-box-trim: trim-start` with `text-box-edge: cap`, for openings where the eye measures ink to edge (heroes, cards, page tops). It requires a `cap-height-ratio` key in the font-map.
 
-A cap-anchored block shifts its baselines off the grid by the fractional part of the cap height, so it must be closed with `cap-bottom()` — not `baseline-bottom()` — which returns at the bottom exactly what `cap-top()` trimmed at the top. The pair makes the block span a whole number of rhythm grids, keeping everything after it in rhythm:
+A cap-anchored block shifts its baselines off the grid by the fractional part of the cap height, so it must be closed with `cap-bottom()` rather than `baseline-bottom()`. `cap-bottom()` returns at the bottom exactly what `cap-top()` trimmed at the top, and the pair makes the block span a whole number of rhythm grids, keeping everything after it in rhythm:
 
 ```scss
 .hero-heading {
@@ -194,11 +198,29 @@ A cap-anchored block shifts its baselines off the grid by the fractional part of
 }
 ```
 
+### `drop-cap-metrics($font-map, $lines, $cap-font-map: null)`
+
+The `drop-cap-metrics()` function returns the solution the [`drop-cap`](#drop-capfont-map-lines-cap-font-map-null-clear-lines-0) mixin emits, as a map with `font-size`, `line-height` and `top` keys. Use it when a stylesheet needs the values themselves, for example to check where each browser paints the capital and adjust its size before applying it. `$lines` and `$cap-font-map` work as in the mixin; `$clear-lines` only adds a margin, so it has no counterpart here.
+
+```scss
+@use "sass:map";
+
+$cap: drop-cap-metrics($paragraph-font, 3);
+
+.paragraph-drop-cap {
+  float: left;
+  position: relative;
+  top: map.get($cap, top);
+  font-size: map.get($cap, font-size);
+  line-height: map.get($cap, line-height);
+}
+```
+
 ## Mixins
 
 ### `font($font-map, $spacing-map)`
 
-The `font` mixin efficiently generates font-related CSS properties and calculates spacings. It translates all `$font-map` keys into corresponding CSS properties, except for the metric keys (`baseline-ratio`, `ascent`, `descent`, `units-per-em`, `cap-height-ratio`), facilitating easy style reuse. It also simplifies calling rhythm functions for calculations.
+The `font` mixin emits a font-map as CSS: `font-size`, `line-height` in rhythm grids and every other key except the metric keys (`baseline-ratio`, `ascent`, `descent`, `units-per-em` and `cap-height-ratio`). Its `$spacing-map` resolves margins and paddings through the rhythm functions.
 
 The `$spacing-map` accepts four keys, each corresponding to a CSS property:
 
@@ -207,10 +229,10 @@ The `$spacing-map` accepts four keys, each corresponding to a CSS property:
 - `padding-top`
 - `padding-bottom`
 
-These keys use a special syntax to call rhythm functions. Here's how it works:
+These keys use a special syntax to call rhythm functions:
 
 1. The value for each key is a Sass list.
-2. The first item in the list is the function name. Supported function names are: `rhythm`, `baseline-top`, `baseline-bottom`, `cap-top`, `cap-bottom`, and `baseline-between`.
+2. The first item in the list is the function name: `rhythm` or `baseline-between` for any key, `baseline-top` or `cap-top` for the top keys and `baseline-bottom` or `cap-bottom` for the bottom keys.
 3. The remaining items are the function arguments.
 4. For all functions except `rhythm`, the current `$font-map` is automatically injected and should be omitted from the arguments. For `rhythm`, no font-map is needed and the arguments are passed directly.
 5. When calling the `baseline-between` function:
@@ -246,11 +268,11 @@ In this example:
 - `padding-top` value is translated to `rhythm(1)`.
 - `padding-bottom` value is translated to `baseline-bottom($quote-font-map, 3)`.
 
-For more examples, please refer to the [examples](./examples) folder in the project root.
+The [examples](./examples) folder has a complete page.
 
 ### `drop-cap($font-map, $lines, $cap-font-map: null, $clear-lines: 0)`
 
-The `drop-cap` mixin solves a drop cap sunk `$lines` lines deep into text set in `$font-map`: it emits the `font-size`, `line-height`, `float`, and baseline anchor that make the capital span from the first line's cap top down to the `$lines`-th baseline. Apply it to a real first-character wrapper so every emitted property, including the relative baseline inset, works consistently:
+The `drop-cap` mixin solves a drop cap sunk `$lines` lines deep into text set in `$font-map`: it emits the `font-size`, `line-height`, `float` and baseline anchor that make the capital span from the first line's cap top down to the `$lines`-th baseline. Apply it to a real first-character wrapper so every emitted property, including the relative baseline inset, works consistently:
 
 ```html
 <p><span class="paragraph-drop-cap">L</span>orem ipsum…</p>
@@ -264,7 +286,7 @@ The `drop-cap` mixin solves a drop cap sunk `$lines` lines deep into text set in
 }
 ```
 
-- `$clear-lines` (optional) reserves that many extra wrapped body lines below the letter. Letters with descender tails (Q, J) extend ink below the anchored baseline into the following line's row; `$clear-lines: 1` gives the tail its own clear row. Floats exclude text per whole line box, which is why the unit is body lines rather than rhythms — the clearance is always whole rhythms, so the grid stays intact:
+- `$clear-lines` (optional) reserves that many extra wrapped body lines below the letter. Letters with descender tails (Q, J) extend ink below the anchored baseline into the following line's row; `$clear-lines: 1` gives the tail its own clear row. Floats exclude text per whole line box, which is why the unit is body lines rather than rhythms; the clearance is always whole rhythms, and the grid stays intact:
 
 ```scss
 .paragraph-drop-cap {
@@ -272,31 +294,31 @@ The `drop-cap` mixin solves a drop cap sunk `$lines` lines deep into text set in
 }
 ```
 
-- `$cap-font-map` (optional) sets a different face for the capital: a map carrying the cap face's `ascent`/`descent` (or `baseline-ratio`), `cap-height-ratio`, and any extra CSS properties such as `font-family`. Its `font-size` and `line-height` are solved by the mixin and therefore ignored.
-- When a map has no `cap-height-ratio`, the classic `0.7em` approximation is used; this can only misplace the visual top — the baseline anchor stays exact.
-- The anchor is emitted as a relative inset (`position: relative; top: …`), not a margin: for cap-heavy faces whose capital height exceeds `ascent - descent` (e.g. Merriweather) the anchor is a downward shift, and a margin would push the following content off the grid.
+- `$cap-font-map` (optional) sets a different face for the capital: a map carrying the cap face's `ascent`/`descent` (or `baseline-ratio`), `cap-height-ratio` and any extra CSS properties such as `font-family`. Its `font-size` and `line-height` are solved by the mixin and therefore ignored.
+- When a map has no `cap-height-ratio`, the classic `0.7em` approximation is used. It can misplace only the visual top, and the baseline anchor stays exact.
+- The anchor is emitted as a relative inset (`position: relative; top: …`), not a margin: for cap-heavy faces whose capital height exceeds `ascent - descent`, such as Merriweather, the anchor is a downward shift, and a margin would push the following content off the grid.
 
 `::first-letter` does not guarantee support for `position`/`top`, so it cannot carry the mixin's exact anchor portably. Browsers with `initial-letter` support can achieve native drop caps without a wrapper; this mixin is the portable, grid-aware alternative.
 
 ### `draw-rhythms($color: rgb(255 120 120 / 25%))`
 
-When fine-tuning your typography, visualizing the vertical rhythm grids can be incredibly helpful in ensuring consistency and identifying any alignment issues. The `draw-rhythms()` mixin is a handy tool for visualizing these grids. It reads your global settings and draws the vertical rhythm grids on the `:root` element, making it easy to see how your typography aligns with the overall rhythm.
+The `draw-rhythms()` mixin draws the vertical rhythm grid over the page from your global settings, so you can see where text sits against it while you tune the typography.
 
 ```scss
-// Include this mixin at the top level of your SCSS file.
+// Include this mixin at the top level of your SCSS file; $production is your own flag.
 
-@if not production {
+@if not $production {
   @include draw-rhythms;
   // or with a custom color
   @include draw-rhythms(rgb(0 255 255 / 25%));
 }
 ```
 
-Note: Enabling this mixin will set the `position` property of your `:root` element to `relative`. If you have already set your `:root` element to a different positioning value (e.g., `absolute` or `fixed`), using this mixin may affect your existing layout. In such cases, you may need to adjust your `:root` element's positioning or find an alternative way to visualize the rhythm grids.
+The mixin sets `position: relative` on `:root`. Before enabling it, check that your layout does not depend on another `position` value there.
 
-## Pro Tip
+## Keeping blocks on whole rows
 
-For complex layouts, it's recommended to ensure that all text elements, such as headings, paragraphs, and lists, occupy a whole number of rhythm grids. This means aligning the top and bottom of each element precisely with the vertical rhythm grid lines. By doing this, each text element will neatly fit into the overall rhythm of the layout, making it much easier to combine and arrange elements harmoniously. Line heights are whole grids by construction; close a baseline-anchored block with `baseline-bottom()`, or a cap-anchored block with the paired `cap-bottom()`, and blocks compose freely without breaking the page rhythm.
+Give every text block, such as a heading, paragraph or list, a height of whole rhythm grids, with its top and bottom edges on grid lines. Blocks then stack in any order without moving the rhythm of the page. Line heights are whole grids already; close a baseline-anchored block with `baseline-bottom()`, or a cap-anchored block with the paired `cap-bottom()`.
 
 ## Changelog
 

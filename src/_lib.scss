@@ -106,7 +106,7 @@
 }
 
 // A cap face carries only ratio-bearing keys (plus optional CSS properties);
-// font-size and line-height are solved by drop-cap, so they are not required.
+// drop-cap-metrics solves font-size and line-height, so neither is required.
 @function ensure-valid-cap-face-map($value) {
   @if meta.type-of($value) != "map" {
     @error "Invalid $cap-font-map: #{meta.inspect($value)}. The value must be a map with optional baseline-ratio (or ascent/descent) and cap-height-ratio keys.";

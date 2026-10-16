@@ -44,6 +44,16 @@ describe("configuration errors", () => {
     ).toThrow(/Invalid \$cap-font-map/);
   });
 
+  test("rejects a non-positive or fractional drop cap depth", () => {
+    const font = "$font: (font-size: 16px, line-height: 3); ";
+    expect(() => compileWith("$baseline-ratio: 0.2", `${font}a { value: rhythm.drop-cap-metrics($font, 0); }`)).toThrow(
+      /Invalid \$lines/,
+    );
+    expect(() => compileWith("$baseline-ratio: 0.2", `${font}a { @include rhythm.drop-cap($font, 1.5); }`)).toThrow(
+      /Invalid \$lines/,
+    );
+  });
+
   test("rejects fractional or negative descender clearance", () => {
     const font = "$font: (font-size: 16px, line-height: 3); ";
     expect(() =>

@@ -116,7 +116,7 @@ $__config: (
   @return baseline-top($font-map, $rhythms, $offset);
 }
 
-// Lands the cap ink top -- not the baseline -- on the nth grid line, for
+// Lands the cap ink top, rather than the baseline, on the nth grid line, for
 // openings where the eye measures ink to edge. Requires cap-height-ratio in
 // the font-map. Close the block with cap-bottom (not baseline-bottom) so it
 // still spans a whole number of rhythms and everything after stays in rhythm.
@@ -196,23 +196,16 @@ $__non-css-keys: (font-size, line-height, baseline-ratio, ascent, descent, units
 }
 
 // Solves a drop cap sunk $lines lines deep into text set in $font-map: the cap
-// spans from the first line's cap top down to the $lines-th baseline. Apply to
-// a real wrapper so the relative baseline inset is portable across browsers.
-// $cap-font-map optionally provides
-// the cap face's own metrics and CSS properties (e.g. font-family); its
-// font-size and line-height are solved here and therefore ignored.
-// $clear-lines reserves extra wrapped body lines below the letter so a
-// descender tail (Q, J) gets its own clear row instead of striking the
-// following line.
-@mixin drop-cap($font-map, $lines, $cap-font-map: null, $clear-lines: 0) {
+// spans from the first line's cap top down to the $lines-th baseline.
+// $cap-font-map optionally provides the cap face's own metrics; its font-size
+// and line-height are solved here and therefore ignored. Returns the cap's
+// font-size, line-height and relative top inset that anchors its baseline,
+// exact like every other result, so a stylesheet can adjust them.
+@function drop-cap-metrics($font-map, $lines, $cap-font-map: null) {
   $_font-map: lib.ensure-valid-font-map($font-map);
 
   @if not lib.is-valid-rhythms($lines) or $lines < 1 {
     @error "Invalid $lines: #{meta.inspect($lines)}. The value must be a positive unitless integer.";
-  }
-
-  @if not lib.is-valid-rhythms($clear-lines) or $clear-lines < 0 {
-    @error "Invalid $clear-lines: #{meta.inspect($clear-lines)}. The value must be a non-negative unitless integer.";
   }
 
   $_cap-face: $_font-map;
@@ -246,23 +239,40 @@ $__non-css-keys: (font-size, line-height, baseline-ratio, ascent, descent, units
   $_cap-baseline-above: math.div($_cap-line-height - $_cap-font-size, 2) + $_cap-font-size * (1 - $_cap-baseline-ratio);
   $_target-baseline: lib.calc-baseline-above-height($_font-map, $__config) + ($lines - 1) * $_line-height;
 
+  @return (font-size: $_cap-font-size, line-height: $_cap-line-height, top: $_target-baseline - $_cap-baseline-above);
+}
+
+// Emits the drop cap that drop-cap-metrics() solves. Apply to a real wrapper so
+// the relative baseline inset is portable across browsers. A $cap-font-map also
+// contributes its extra CSS properties, such as font-family. $clear-lines
+// reserves extra wrapped body lines below the letter so a descender tail (Q, J)
+// gets its own clear row instead of striking the following line.
+@mixin drop-cap($font-map, $lines, $cap-font-map: null, $clear-lines: 0) {
+  $_metrics: drop-cap-metrics($font-map, $lines, $cap-font-map);
+
+  @if not lib.is-valid-rhythms($clear-lines) or $clear-lines < 0 {
+    @error "Invalid $clear-lines: #{meta.inspect($clear-lines)}. The value must be a non-negative unitless integer.";
+  }
+
   float: left;
 
   // The anchor is a relative inset, not a margin: for cap-heavy faces
   // (cap height > ascent - descent) the offset is downward, and a margin
   // would push the following content off the grid.
   position: relative;
-  top: $_target-baseline - $_cap-baseline-above;
-  font-size: $_cap-font-size;
-  line-height: $_cap-line-height;
+  top: map.get($_metrics, top);
+  font-size: map.get($_metrics, font-size);
+  line-height: map.get($_metrics, line-height);
 
   @if $clear-lines > 0 {
     // Floats exclude text per whole line box, so clearance counts in body
     // lines; the margin extends the exclusion area without moving the glyph.
-    margin-bottom: $clear-lines * $_line-height;
+    margin-bottom: $clear-lines * rhythm(map.get($font-map, line-height));
   }
 
   @if lib.is-present($cap-font-map) {
+    $_cap-face: lib.ensure-valid-cap-face-map($cap-font-map);
+
     @each $_property in map.keys(map.remove($_cap-face, $__non-css-keys...)) {
       #{$_property}: map.get($_cap-face, $_property);
     }

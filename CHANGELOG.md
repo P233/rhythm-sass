@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.1.0] - 2026-10-16
+
+### Added
+- `drop-cap-metrics($font-map, $lines, $cap-font-map: null)` returns the `font-size`, `line-height` and `top` that the `drop-cap` mixin emits, so a stylesheet can adjust them, for example to keep a large capital on the same pixel in every browser. The mixin now emits this function's result, and its output is unchanged.
+- Tests for a rem rhythm grid, covering `drop-cap-metrics()` and the `drop-cap` mixin's descender clearance.
+
+### Changed
+- The README notes that browsers round fractional baselines differently (measured on macOS: Chromium rounds a font's ascent and descent to whole pixels, Firefox rounds them up, WebKit keeps the exact value), which subpixel rendering alone does not hide.
+- The README lists which spacing-map functions each property accepts, matching the `font` mixin's checks.
+
+### Fixed
+- The README's `draw-rhythms` example tested a bare `production` word, which Sass reads as a truthy string, so `@if not production` never drew the grid; it now tests a `$production` flag.
+
 ## [2.0.1] - 2026-08-15
 
 ### Changed

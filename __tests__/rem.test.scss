@@ -1,0 +1,39 @@
+@use "true" as *;
+@use "font-maps" as *;
+@use "../src/rhythm" as * with (
+  $rhythm-size: 0.5rem
+);
+
+// The px drop-cap geometry on a rem grid: every result stays in rem.
+@include test-module("Test a rem rhythm grid:") {
+  @include test("drop-cap-metrics") {
+    // stylelint-disable length-zero-no-unit -- the function returns the unit
+    @include assert-equal(
+      drop-cap-metrics($clean-body, 2),
+      (
+        font-size: 4rem,
+        line-height: 3rem,
+        top: 0rem
+      )
+    );
+    // stylelint-enable length-zero-no-unit
+  }
+
+  @include test("drop-cap") {
+    @include assert {
+      @include output {
+        @include drop-cap($clean-body, 2, $clear-lines: 1);
+      }
+
+      @include expect {
+        float: left;
+        position: relative;
+        // stylelint-disable-next-line length-zero-no-unit -- the mixin emits the unit
+        top: 0rem;
+        font-size: 4rem;
+        line-height: 3rem;
+        margin-bottom: 1.5rem;
+      }
+    }
+  }
+}
