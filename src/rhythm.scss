@@ -187,7 +187,10 @@ $__non-css-keys: (font-size, line-height, baseline-ratio, ascent, descent, units
       @error "Unsupported property #{meta.inspect($_property)} in #{meta.inspect($spacing-map)}.";
     }
 
-    @if ($_property == "padding-top" or $_property == "padding-bottom") and $_result < 0 {
+    $_is-padding: $_property == "padding-top" or $_property == "padding-bottom";
+
+    // An offset in another unit leaves a calc() that Sass cannot compare.
+    @if $_is-padding and meta.type-of($_result) == number and $_result < 0 {
       @error "The calculated #{$_property} value (#{$_result}) is negative. Please update your rhythm counts to ensure a non-negative value.";
     }
 

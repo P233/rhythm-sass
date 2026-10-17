@@ -36,4 +36,23 @@
       }
     }
   }
+
+  @include test("font with an offset in another unit") {
+    @include assert {
+      @include output {
+        @include font(
+          $clean-body,
+          (
+            padding-top: baseline-top 3 -1px
+          )
+        );
+      }
+
+      @include expect {
+        font-size: 16px;
+        line-height: 1.5rem;
+        padding-top: calc(0.5rem - 1px);
+      }
+    }
+  }
 }

@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.1.1] - 2026-10-17
+
+### Changed
+- The README describes responsive typography: one font-map per breakpoint, a grid that scales with the root font size, and fluid sizes written in CSS with each engine's baseline rounding.
+- The README's `pkg:` note says that `NodePackageImporter` must be registered, which Vite and sass-loader do not do by default, and the measured `baseline-ratio` option points to Plumber's table.
+
+### Fixed
+- A padding whose offset is in another unit than `$rhythm-size`, such as `baseline-top 3 -1px` on a `rem` grid, no longer stops the build with "Undefined operation". Sass cannot compare the resulting `calc()`, so such a padding skips the negative-value check.
+
 ## [2.1.0] - 2026-10-16
 
 ### Added

@@ -8,7 +8,7 @@
 
 rhythm-sass is a Sass library for print-inspired vertical rhythm on the web: it computes the spacing that puts every text baseline on a vertical rhythm grid, with baseline offsets derived from the font's own metrics. It builds on concepts introduced by [Plumber](https://jamonserrano.github.io/plumber-sass/), and [rhythm-gpui](https://github.com/p233/rhythm-gpui) ports it to Rust for gpui apps.
 
-No baseline ratio has to be measured by hand: rhythm-sass derives it from the `ascent`, `descent` and `units-per-em` values in the font's metrics tables, which the bundled `npx rhythm-sass` command reads for you. A measured `baseline-ratio` still works, such as one from [Plumber's table of baseline ratios for Google Fonts and Typekit faces](https://jamonserrano.github.io/plumber-sass/baselines/), and [the rhythm-sass post](https://peiwen.lu/posts/rhythm-sass) explains the model behind the ratio.
+No baseline ratio has to be measured by hand: rhythm-sass derives it from the `ascent`, `descent` and `units-per-em` values in the font's metrics tables, which the bundled `npx rhythm-sass` command reads for you. Ratios measured for Plumber remain valid: any value from its [table of baseline ratios for Google Fonts and Typekit faces](https://jamonserrano.github.io/plumber-sass/baselines/) can be set as `baseline-ratio`. [The rhythm-sass post](https://peiwen.lu/posts/rhythm-sass) explains the model behind the ratio.
 
 rhythm-sass works in Sass at build time and covers type and the spacing around it. It does not fit images or other media to the grid, and it does not correct for how each browser rounds a baseline; [Functions](#functions) explains where browsers differ.
 
