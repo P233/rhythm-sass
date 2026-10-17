@@ -8,7 +8,7 @@
 
 rhythm-sass is a Sass library for print-inspired vertical rhythm on the web: it computes the spacing that puts every text baseline on a vertical rhythm grid, with baseline offsets derived from the font's own metrics. It builds on concepts introduced by [Plumber](https://jamonserrano.github.io/plumber-sass/), and [rhythm-gpui](https://github.com/p233/rhythm-gpui) ports it to Rust for gpui apps.
 
-No baseline ratio has to be measured by hand: rhythm-sass derives it from the `ascent`, `descent` and `units-per-em` values in the font's metrics tables, which the bundled `npx rhythm-sass` command reads for you. A measured `baseline-ratio` still works, and [the rhythm-sass post](https://peiwen.lu/posts/rhythm-sass) explains the model behind the ratio.
+No baseline ratio has to be measured by hand: rhythm-sass derives it from the `ascent`, `descent` and `units-per-em` values in the font's metrics tables, which the bundled `npx rhythm-sass` command reads for you. A measured `baseline-ratio` still works, such as one from [Plumber's table of baseline ratios for Google Fonts and Typekit faces](https://jamonserrano.github.io/plumber-sass/baselines/), and [the rhythm-sass post](https://peiwen.lu/posts/rhythm-sass) explains the model behind the ratio.
 
 rhythm-sass works in Sass at build time and covers type and the spacing around it. It does not fit images or other media to the grid, and it does not correct for how each browser rounds a baseline; [Functions](#functions) explains where browsers differ.
 
@@ -49,7 +49,7 @@ npm install --save-dev rhythm-sass
 }
 ```
 
-> **Note:** The `pkg:` URL syntax requires Sass 1.71+ and a bundler that supports it, such as Vite or webpack 5. If your toolchain does not support `pkg:` URLs yet, use `"rhythm-sass"` directly.
+> **Note:** `pkg:` URLs need Sass 1.71 or later with its `NodePackageImporter` registered, such as `importers: [new NodePackageImporter()]` in Vite's `css.preprocessorOptions.scss` or in sass-loader's `sassOptions`. Without it, use `"rhythm-sass"`, which Vite resolves through the package's `sass` export.
 
 This library exposes the following global variables:
 
@@ -137,13 +137,13 @@ The `rhythm()` function calculates the total height of a specified number of rhy
 - `$rhythms`: The number of rhythm grids
 - `$offset` (optional): Adjusts the calculated result for additional sizing factors, such as border width. Must carry a length unit.
 
-For example, if you want to add a top padding of `5` rhythm grids to an element with a `1px` top border, the actual `padding-top` should be `39px` instead of `40px` (assuming an 8px rhythm). You can calculate the correct padding using a `-1px` offset parameter:
+For example, if you want to add a top padding of 5 rhythm grids to an element with a 1px top border, the actual `padding-top` should be `39px` instead of `40px` (assuming an 8px rhythm). You can calculate the correct padding using a `-1px` offset parameter:
 
 ```scss
 padding-top: rhythm(5, -1px);
 ```
 
-The offset unit is automatically handled by the function. If different units are used, the function will output the result in the `calc()` format.
+An offset in a different unit from `$rhythm-size`, such as `rem` against `px`, makes the function return a `calc()` expression.
 
 ### `baseline-top($font-map, $rhythms, $offset: 0)` <br/> `rhythm-bottom($font-map, $rhythms, $offset: 0)`
 
@@ -182,7 +182,7 @@ The `baseline-between()` function calculates the spacing between two fonts, from
 
 ### `cap-top($font-map, $rhythms, $offset: 0)` <br/> `cap-bottom($font-map, $rhythms, $offset: 0)`
 
-The `cap-top()` function lands the capital letters' **ink**, rather than the baseline, on the nth grid line. It is the grid-woven analog of CSS `text-box-trim: trim-start` with `text-box-edge: cap`, for openings where the eye measures ink to edge (heroes, cards, page tops). It requires a `cap-height-ratio` key in the font-map.
+The `cap-top()` function lands the capital letters' **ink**, rather than the baseline, on the nth grid line. It works like CSS `text-box-trim: trim-start` with `text-box-edge: cap`, but measures from a grid line, for openings where the eye measures ink to edge, such as heroes, cards and page tops. It requires a `cap-height-ratio` key in the font-map.
 
 A cap-anchored block shifts its baselines off the grid by the fractional part of the cap height, so it must be closed with `cap-bottom()` rather than `baseline-bottom()`. `cap-bottom()` returns at the bottom exactly what `cap-top()` trimmed at the top, and the pair makes the block span a whole number of rhythm grids, keeping everything after it in rhythm:
 
@@ -220,7 +220,7 @@ $cap: drop-cap-metrics($paragraph-font, 3);
 
 ### `font($font-map, $spacing-map)`
 
-The `font` mixin emits a font-map as CSS: `font-size`, `line-height` in rhythm grids and every other key except the metric keys (`baseline-ratio`, `ascent`, `descent`, `units-per-em` and `cap-height-ratio`). Its `$spacing-map` resolves margins and paddings through the rhythm functions.
+The `font` mixin emits a font-map as CSS: `font-size`, `line-height` in rhythm grids and every other key except the metric keys (`baseline-ratio`, `ascent`, `descent`, `units-per-em` and `cap-height-ratio`). Its optional `$spacing-map` resolves margins and paddings through the rhythm functions.
 
 The `$spacing-map` accepts four keys, each corresponding to a CSS property:
 
@@ -242,20 +242,20 @@ These keys use a special syntax to call rhythm functions:
 Example usage:
 
 ```scss
-$paragraph-font-map: (
+$paragraph-font: (
   font-size: 20px,
-  line-height: 4,
+  line-height: 4
 );
 
-$quote-font-map: (
+$quote-font: (
   font-size: 18px,
   line-height: 3,
   font-style: italic
 );
 
 .quote {
-  @include font($quote-font-map, (
-    margin-top: baseline-between $paragraph-font-map 3,
+  @include font($quote-font, (
+    margin-top: baseline-between $paragraph-font 3,
     padding-top: rhythm 1,
     padding-bottom: baseline-bottom 3
   ));
@@ -264,9 +264,9 @@ $quote-font-map: (
 
 In this example:
 
-- `margin-top` value is translated to `baseline-between($paragraph-font-map, $quote-font-map, 3)`.
+- `margin-top` value is translated to `baseline-between($paragraph-font, $quote-font, 3)`.
 - `padding-top` value is translated to `rhythm(1)`.
-- `padding-bottom` value is translated to `baseline-bottom($quote-font-map, 3)`.
+- `padding-bottom` value is translated to `baseline-bottom($quote-font, 3)`.
 
 The [examples](./examples) folder has a complete page.
 
@@ -319,6 +319,131 @@ The mixin sets `position: relative` on `:root`. Before enabling it, check that y
 ## Keeping blocks on whole rows
 
 Give every text block, such as a heading, paragraph or list, a height of whole rhythm grids, with its top and bottom edges on grid lines. Blocks then stack in any order without moving the rhythm of the page. Line heights are whole grids already; close a baseline-anchored block with `baseline-bottom()`, or a cap-anchored block with the paired `cap-bottom()`.
+
+## Responsive typography
+
+`$rhythm-size` is set once per compilation through `@use ... with`, so the Sass value cannot change at a breakpoint. A breakpoint can still change the type and the grid it sits on in the three ways below.
+
+### One font-map per breakpoint
+
+Set `$rhythm-size` to the smallest row the design needs and change the counts instead: each breakpoint gets its own font-map and its own `font()` call, and a wider screen keeps blocks on rows twice as tall by using even counts for line heights, baseline offsets and block heights.
+
+```scss
+@use "pkg:rhythm-sass" as * with (
+  $ascent: 1069,
+  $descent: -293,
+  $rhythm-size: 4px
+);
+
+$paragraph-font: (
+  font-size: 20.25px,
+  line-height: 8 // 32px
+);
+
+$paragraph-font-mobile: (
+  font-size: 18px,
+  line-height: 7 // 28px
+);
+
+p {
+  // 40px tall: five 8px rows, with the baseline 24px down.
+  @include font($paragraph-font, (
+    padding-top: baseline-top 6,
+    padding-bottom: baseline-bottom 4
+  ));
+
+  @media (width <= 599px) {
+    // 32px tall: eight 4px rows.
+    @include font($paragraph-font-mobile, (
+      padding-top: baseline-top 6,
+      padding-bottom: baseline-bottom 2
+    ));
+  }
+}
+```
+
+Each breakpoint is a separate solution for one font size, which keeps the number of sizes small enough to check in every target browser, as [Functions](#functions) describes.
+
+### Scaling the grid with the root font size
+
+With `$rhythm-size` and every font size in `rem`, the functions return `rem` as well, and the whole grid scales with the root font size. One font-map then serves every breakpoint, and a breakpoint changes only `font-size` on `:root`:
+
+```scss
+@use "pkg:rhythm-sass" as * with (
+  $ascent: 1069,
+  $descent: -293,
+  $rhythm-size: 0.25rem
+);
+
+$paragraph-font: (
+  font-size: 1.25rem,
+  line-height: 8
+);
+
+:root {
+  font-size: 16px; // 4px rows
+
+  @media (width <= 599px) {
+    font-size: 12px; // 3px rows
+  }
+}
+
+p {
+  @include font($paragraph-font, (
+    padding-top: baseline-top 6,
+    padding-bottom: baseline-bottom 4
+  ));
+}
+```
+
+Choose root sizes that keep a row a whole number of pixels, such as multiples of 4px for a `0.25rem` row; a fractional row puts fractional offsets on every block. Every element scales by the same factor, so a breakpoint cannot shrink headings more than body text, and each root size is another set of sizes to check in the browsers.
+
+### Fluid sizes
+
+The functions need a font size known at build time, so they cannot follow a size that changes with the viewport. The model is linear in the font size, though, and CSS can compute it: the baseline sits `0.5lh + (0.5 - r) * 1em` below the top of the line box, where `r` is the baseline ratio, and `round()` snaps the line height to the row. For Noto Serif, `0.5 - r` is `0.388`:
+
+```css
+.display-heading {
+  --row: 8px;
+
+  font-size: clamp(51.96px, 38.25px + 3.52vw, 83.25px);
+  line-height: round(up, 1em + 28px, var(--row));
+  padding-top: calc(128px - 0.5lh - 0.388em); /* baseline 128px below the top */
+  padding-bottom: calc(56px - 0.5lh + 0.388em); /* 184px in all */
+}
+
+@media (width <= 599px) {
+  .display-heading {
+    --row: 4px;
+  }
+}
+```
+
+Measured on macOS with Chromium 153, Firefox 155 and WebKit 26.6 at 113 widths from 320px to 1440px, the baseline of such a block stays within 0.94px of its row. The fractional padding costs more: Chromium and WebKit leave the block 1/64px short at every width, and 64 such blocks push the text below them a pixel off the grid. Rounding `padding-top` to whole pixels and deriving `padding-bottom` from the fixed height keeps the block exact in Chromium and Firefox and at all but 6 widths in WebKit, but then Chromium puts the baseline a full pixel off at 23 of the 113 widths. The ratio of line height to font size also drifts, from 1.35 to 1.61 in this range.
+
+Applying each engine's own rounding removes nearly all of the baseline error. Chromium rounds the ascent and descent to whole pixels and floors half the leading, Firefox rounds them up and splits the leading to the half pixel, and WebKit keeps the exact offset, which the CSS rounds to WebKit's 1/64px layout unit so the paddings lose nothing. `@supports` selects the model, since only Firefox parses `-moz-appearance` and only Apple's WebKit parses `-apple-system-body`:
+
+```css
+.display-heading {
+  --above: calc(round(1.069em, 1px) + round(down, (1lh - round(1.069em, 1px) - round(0.293em, 1px)) / 2, 1px));
+  padding-top: calc(128px - var(--above));
+  padding-bottom: calc(56px - 1lh + var(--above));
+}
+
+@supports (-moz-appearance: none) {
+  .display-heading {
+    --above: calc(round(up, 1.069em, 1px) + (1lh - round(up, 1.069em, 1px) - round(up, 0.293em, 1px)) / 2);
+  }
+}
+
+@supports (font: -apple-system-body) {
+  .display-heading {
+    --above: round(0.5lh + 0.388em, 0.015625px);
+  }
+}
+```
+
+`1.069` and `0.293` are Noto Serif's ascent and descent over its units per em. Measured the same way on a block of this kind, the baseline sits on its row in Chromium and Firefox and within 0.01px of it in WebKit, and the block keeps its height to within 1/64px. Any other engine falls back to Chromium's model, and a change to an engine's rounding needs its branch updated. With the ratio of line height to font size still drifting, a fluid size suits headings better than running text.
 
 ## Changelog
 
